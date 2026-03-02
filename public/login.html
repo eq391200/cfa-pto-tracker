@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CFA La Rambla - PTO Tracker</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="/img/cfa-favicon.ico" type="image/x-icon">
+  <meta name="theme-color" content="#E8B5A8">
+</head>
+<body>
+  <div class="login-container">
+    <div class="login-box">
+      <div class="login-logo">
+        <img src="/img/cfa-logo.gif" alt="Chick-fil-A" onerror="this.style.display='none'">
+      </div>
+      <h1>PTO Tracker</h1>
+      <p class="login-subtitle">CFA La Rambla — Team Portal</p>
+
+      <!-- Login Form -->
+      <form id="loginForm">
+        <div class="form-group">
+          <label for="username">PIN</label>
+          <input type="text" id="username" name="username" required autocomplete="username" placeholder="Enter your Clock-In PIN">
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" required autocomplete="current-password" placeholder="Enter your password">
+        </div>
+        <p style="color:var(--text-light); font-size:0.8rem; margin-bottom:1rem;">First time? Use your PIN as both username and password.</p>
+        <div id="error" style="color: var(--danger); font-size: 0.875rem; margin-bottom: 1rem; display: none;"></div>
+        <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">Sign In</button>
+      </form>
+
+      <!-- Set Password Form (shown on first login) -->
+      <form id="setPasswordForm" style="display:none;">
+        <p style="margin-bottom:1rem; color:var(--text-light);">Welcome! Please create your own password to continue.</p>
+        <div class="form-group">
+          <label for="newPassword">New Password</label>
+          <input type="password" id="newPassword" required minlength="6" placeholder="At least 6 characters">
+        </div>
+        <div class="form-group">
+          <label for="confirmPassword">Confirm Password</label>
+          <input type="password" id="confirmPassword" required minlength="6" placeholder="Re-enter password">
+        </div>
+        <div id="setError" style="color: var(--danger); font-size: 0.875rem; margin-bottom: 1rem; display: none;"></div>
+        <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">Set Password</button>
+      </form>
+    </div>
+  </div>
+  <script src="/js/login.js"></script>
+</body>
+</html>

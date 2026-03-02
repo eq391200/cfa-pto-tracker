@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CFA La Rambla - My Time Off</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="/img/cfa-favicon.ico" type="image/x-icon">
+  <meta name="theme-color" content="#004F71">
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-brand">
+      <img src="/img/cfa-logo.gif" alt="Chick-fil-A" onerror="this.style.display='none'">
+      <div class="header-divider"></div>
+      <h1>My Time Off</h1>
+    </div>
+    <button class="hamburger-btn" onclick="toggleMobileMenu()" aria-label="Menu">&#9776;</button>
+    <div class="header-actions">
+      <span id="userInfo"></span>
+      <button class="btn btn-sm" onclick="logout()">Sign Out</button>
+    </div>
+  </header>
+
+  <div class="main-content">
+    <!-- Balance Cards -->
+    <div class="stats-grid" id="balances"></div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" data-tab="history" onclick="switchTab('history')">Accrual History</button>
+      <button class="tab" data-tab="timeoff" onclick="switchTab('timeoff')">Time-Off History</button>
+      <button class="tab" data-tab="request" onclick="switchTab('request')">Request Time-Off</button>
+      <button class="tab" data-tab="myrequests" onclick="switchTab('myrequests')">My Requests</button>
+    </div>
+
+    <!-- Accrual History Tab -->
+    <div id="tab-history">
+      <div class="table-container" style="max-height:500px; overflow-y:auto;">
+        <table class="responsive-table">
+          <thead>
+            <tr>
+              <th>Month</th>
+              <th class="text-right">Hours</th>
+              <th class="text-center">Qualified</th>
+              <th class="text-right">Sick Earned</th>
+              <th class="text-right">Vac Earned</th>
+              <th>Vac Rate</th>
+            </tr>
+          </thead>
+          <tbody id="historyBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Time-Off History Tab -->
+    <div id="tab-timeoff" style="display:none;">
+      <div class="table-container" style="max-height:500px; overflow-y:auto;">
+        <table class="responsive-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Type</th>
+              <th class="text-right">Days</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody id="timeOffBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Request Tab -->
+    <div id="tab-request" style="display:none;">
+      <div class="detail-panel" style="max-width:500px;">
+        <h2 id="requestFormTitle">Request Time Off</h2>
+        <p id="requestFormDesc" style="color:var(--text-light); margin-bottom:1rem;">Submit a request for time off. Your manager will review and approve or reject it.</p>
+        <form id="requestForm" onsubmit="submitRequest(event)">
+          <div class="form-group">
+            <label for="reqType">Type</label>
+            <select id="reqType" required onchange="onReqTypeChange()">
+              <option value="vacation">Vacation</option>
+              <option value="sick">Sick</option>
+              <option value="punch_adjustment">Punch Adjustment</option>
+            </select>
+          </div>
+
+          <!-- PTO Fields (vacation/sick) -->
+          <div id="ptoFields">
+            <div class="form-group">
+              <label for="reqDays">Days Requested</label>
+              <input type="number" id="reqDays" step="0.125" min="0.125">
+              <small style="color:var(--text-light);">Available <span id="reqBalType">vacation</span> balance: <strong id="reqBalance">-</strong> days</small>
+            </div>
+            <div class="form-group">
+              <label for="reqStart">Start Date</label>
+              <input type="date" id="reqStart">
+            </div>
+            <div class="form-group">
+              <label for="reqEnd">End Date</label>
+              <input type="date" id="reqEnd">
+            </div>
+          </div>
+
+          <!-- Punch Adjustment Fields -->
+          <div id="punchFields" style="display:none;">
+            <div class="form-group">
+              <label for="punchDate">Date of Missed Punch</label>
+              <input type="date" id="punchDate">
+            </div>
+            <div class="form-group">
+              <label for="clockIn">Clock-In Time</label>
+              <input type="time" id="clockIn">
+            </div>
+            <div class="form-group">
+              <label for="clockOut">Clock-Out Time</label>
+              <input type="time" id="clockOut">
+            </div>
+            <div class="form-group">
+              <label for="breakStart">Break Start Time <small style="color:var(--text-light);">(optional)</small></label>
+              <input type="time" id="breakStart">
+            </div>
+            <div class="form-group">
+              <label for="breakEnd">Break End Time <small style="color:var(--text-light);">(optional)</small></label>
+              <input type="time" id="breakEnd">
+            </div>
+            <div class="form-group" style="background:var(--bg-alt); padding:1rem; border-radius:8px; border:1px solid var(--border);">
+              <label style="display:flex; align-items:flex-start; gap:0.5rem; margin-bottom:0.75rem; cursor:pointer;">
+                <input type="checkbox" id="ackPromise" style="width:auto; margin-top:3px;">
+                <span>I promise to make my punches correctly going forward.</span>
+              </label>
+              <label style="display:flex; align-items:flex-start; gap:0.5rem; cursor:pointer;">
+                <input type="checkbox" id="ackFault" style="width:auto; margin-top:3px;">
+                <span>I understand that not punching is a fault and I can receive disciplinary action.</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="reqReason">Notes (optional)</label>
+            <textarea id="reqReason" rows="2"></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary">Submit Request</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- My Requests Tab -->
+    <div id="tab-myrequests" style="display:none;">
+      <div class="table-container">
+        <table class="responsive-table">
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th class="text-right">Days</th>
+              <th>Start</th>
+              <th>End</th>
+              <th>Reason</th>
+              <th>Status</th>
+              <th>Reviewed By</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="myRequestsBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentUser = null;
+    let vacBalance = 0;
+    let sickBalance = 0;
+    const SICK_CAP = 15;
+    const monthNames = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    // Mobile menu
+    function toggleMobileMenu() {
+      document.querySelector('.header-actions').classList.toggle('mobile-open');
+    }
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.header-actions') && !e.target.closest('.hamburger-btn')) {
+        document.querySelector('.header-actions')?.classList.remove('mobile-open');
+      }
+    });
+
+    (async function init() {
+      try {
+        const res = await fetch('/api/auth/me');
+        if (!res.ok) { window.location.href = '/login.html'; return; }
+        currentUser = await res.json();
+        if (currentUser.role === 'admin') { window.location.href = '/index.html'; return; }
+        document.getElementById('userInfo').textContent = currentUser.username;
+        if (!currentUser.employeeId) {
+          document.querySelector('.main-content').innerHTML = '<p style="padding:2rem; text-align:center;">No employee profile linked to your account. Please contact HR.</p>';
+          return;
+        }
+        loadData();
+      } catch { window.location.href = '/login.html'; }
+    })();
+
+    function esc(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    async function loadData() {
+      const res = await fetch(`/api/accruals/detail/${currentUser.employeeId}`);
+      const data = await res.json();
+
+      // ── Vacation calculations ──
+      const totalVac = data.months.reduce((s, m) => s + (m.vacation_days_earned || 0), 0);
+      const vacTaken = data.timeOff.filter(t => t.type === 'vacation').reduce((s, t) => s + t.days_taken, 0);
+      const vacPending = data.requests
+        ? data.requests.filter(r => r.type === 'vacation' && r.status === 'pending').reduce((s, r) => s + r.days_requested, 0)
+        : 0;
+      vacBalance = Math.round((totalVac - vacTaken) * 100) / 100;
+      const vacAvailable = Math.round((vacBalance - vacPending) * 100) / 100;
+
+      // ── Sick calculations (capped at 15 days) ──
+      const totalSickRaw = data.months.reduce((s, m) => s + (m.sick_days_earned || 0), 0);
+      const totalSick = Math.min(totalSickRaw, SICK_CAP);
+      const sickTaken = data.timeOff.filter(t => t.type === 'sick').reduce((s, t) => s + t.days_taken, 0);
+      const sickPending = data.requests
+        ? data.requests.filter(r => r.type === 'sick' && r.status === 'pending').reduce((s, r) => s + r.days_requested, 0)
+        : 0;
+      sickBalance = Math.round((totalSick - sickTaken) * 100) / 100;
+      const sickAvailable = Math.round((sickBalance - sickPending) * 100) / 100;
+
+      // ── Balance cards ──
+      const isExempt = data.employee.employee_type === 'exempt';
+      document.getElementById('balances').innerHTML = `
+        <div class="stat-card"><div class="label">Vacation Earned</div><div class="value">${totalVac.toFixed(2)}</div></div>
+        <div class="stat-card"><div class="label">Vacation Used</div><div class="value">${vacTaken.toFixed(2)}</div></div>
+        <div class="stat-card"><div class="label">Vacation Pending</div><div class="value">${vacPending.toFixed(2)}</div></div>
+        <div class="stat-card"><div class="label">Vacation Available</div><div class="value" style="color: var(--cfa-red);">${vacAvailable.toFixed(2)}</div></div>
+        ${isExempt ? `<div class="stat-card"><div class="label">Sick Earned</div><div class="value">${totalSick.toFixed(2)}<small style="font-size:0.6em; color:var(--text-light);"> / ${SICK_CAP}</small></div></div>` : ''}
+        <div class="stat-card"><div class="label">Sick Used</div><div class="value">${sickTaken.toFixed(2)}</div></div>
+        ${isExempt ? `<div class="stat-card"><div class="label">Sick Pending</div><div class="value">${sickPending.toFixed(2)}</div></div>` : ''}
+        ${isExempt ? `<div class="stat-card"><div class="label">Sick Available</div><div class="value" style="color: var(--cfa-red);">${sickAvailable.toFixed(2)}</div></div>` : ''}
+      `;
+
+      // Update request form balance display
+      updateReqBalance();
+
+      // Accrual history — full monthly breakdown
+      document.getElementById('historyBody').innerHTML = data.months.length ?
+        data.months.map(m => {
+          const qualified = m.sick_days_earned > 0;
+          let vacRate = '-';
+          if (m.vacation_days_earned === 1.25) vacRate = '10 hrs (15+yr)';
+          else if (m.vacation_days_earned === 1.00) vacRate = '8 hrs (5-15yr)';
+          else if (m.vacation_days_earned === 0.75) vacRate = '6 hrs (1-5yr)';
+          else if (m.vacation_days_earned === 0.50) vacRate = '4 hrs (0-1yr)';
+          const hoursDisplay = isExempt ? 'Salaried' : m.total_hours.toFixed(1);
+          return `
+            <tr>
+              <td data-label="Month">${monthNames[m.month]} ${m.year}</td>
+              <td data-label="Hours" class="text-right">${hoursDisplay}</td>
+              <td data-label="Qualified" class="text-center">${qualified ? '<span class="badge badge-active">Yes</span>' : '<span class="badge badge-inactive">No</span>'}</td>
+              <td data-label="Sick Earned" class="text-right">${(m.sick_days_earned || 0).toFixed(0)}</td>
+              <td data-label="Vac Earned" class="text-right">${(m.vacation_days_earned || 0).toFixed(2)}</td>
+              <td data-label="Vac Rate">${qualified ? vacRate : '-'}</td>
+            </tr>
+          `;
+        }).join('') :
+        '<tr><td colspan="6" style="text-align:center; color:var(--text-light);">No accrual history</td></tr>';
+
+      // All time-off history (vacation + sick)
+      document.getElementById('timeOffBody').innerHTML = data.timeOff.length ?
+        data.timeOff.map(t => `
+          <tr>
+            <td data-label="Date">${t.date_taken}</td>
+            <td data-label="Type"><span class="badge badge-${t.type === 'sick' ? 'inactive' : 'active'}">${t.type}</span></td>
+            <td data-label="Days" class="text-right">${t.days_taken}</td>
+            <td data-label="Notes">${esc(t.notes || '')}</td>
+          </tr>
+        `).join('') :
+        '<tr><td colspan="4" style="text-align:center; color:var(--text-light);">No time-off recorded</td></tr>';
+
+      loadMyRequests();
+    }
+
+    function onReqTypeChange() {
+      const type = document.getElementById('reqType').value;
+      const isPunch = type === 'punch_adjustment';
+
+      document.getElementById('ptoFields').style.display = isPunch ? 'none' : '';
+      document.getElementById('punchFields').style.display = isPunch ? '' : 'none';
+
+      // Toggle required attributes so hidden fields don't block submit
+      document.getElementById('reqDays').required = !isPunch;
+      document.getElementById('reqStart').required = !isPunch;
+      document.getElementById('reqEnd').required = !isPunch;
+      document.getElementById('punchDate').required = isPunch;
+      document.getElementById('clockIn').required = isPunch;
+      document.getElementById('clockOut').required = isPunch;
+
+      // Update form title and description
+      document.getElementById('requestFormTitle').textContent = isPunch ? 'Punch Adjustment' : 'Request Time Off';
+      document.getElementById('requestFormDesc').textContent = isPunch
+        ? 'Submit a request when you forgot to punch in or out. Your manager will review it.'
+        : 'Submit a request for time off. Your manager will review and approve or reject it.';
+
+      if (!isPunch) updateReqBalance();
+    }
+
+    function updateReqBalance() {
+      const type = document.getElementById('reqType').value;
+      const balEl = document.getElementById('reqBalance');
+      const typeEl = document.getElementById('reqBalType');
+      if (balEl) balEl.textContent = (type === 'sick' ? sickBalance : vacBalance).toFixed(2);
+      if (typeEl) typeEl.textContent = type;
+    }
+
+    async function submitRequest(e) {
+      e.preventDefault();
+      const type = document.getElementById('reqType').value;
+
+      if (type === 'punch_adjustment') {
+        // ── Punch Adjustment submission ──
+        const punchDate = document.getElementById('punchDate').value;
+        const clockIn = document.getElementById('clockIn').value;
+        const clockOut = document.getElementById('clockOut').value;
+        const breakStart = document.getElementById('breakStart').value;
+        const breakEnd = document.getElementById('breakEnd').value;
+
+        if (!punchDate || !clockIn || !clockOut) {
+          alert('Please fill in the date, clock-in time, and clock-out time.');
+          return;
+        }
+
+        const punchDt = new Date(punchDate + 'T00:00:00');
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (punchDt >= today) { alert('Punch date must be in the past.'); return; }
+        if (clockOut <= clockIn) { alert('Clock-out time must be after clock-in time.'); return; }
+
+        if ((breakStart && !breakEnd) || (!breakStart && breakEnd)) {
+          alert('Please provide both break start and end times, or leave both empty.');
+          return;
+        }
+        if (breakStart && breakEnd) {
+          if (breakEnd <= breakStart) { alert('Break end time must be after break start time.'); return; }
+          if (breakStart < clockIn || breakEnd > clockOut) { alert('Break times must fall within your clock-in and clock-out range.'); return; }
+        }
+
+        if (!document.getElementById('ackPromise').checked || !document.getElementById('ackFault').checked) {
+          alert('You must check both acknowledgment boxes to submit.');
+          return;
+        }
+
+        const body = {
+          employee_id: currentUser.employeeId,
+          type: 'punch_adjustment',
+          punch_date: punchDate,
+          clock_in: clockIn,
+          clock_out: clockOut,
+          break_start: breakStart || null,
+          break_end: breakEnd || null,
+          reason: document.getElementById('reqReason').value
+        };
+
+        const res = await fetch('/api/requests', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          alert('Punch adjustment submitted successfully!');
+          document.getElementById('requestForm').reset();
+          onReqTypeChange();
+          loadData();
+          switchTab('myrequests');
+        } else {
+          alert('Error: ' + data.error);
+        }
+      } else {
+        // ── Time-off (vacation/sick) submission ──
+        const body = {
+          employee_id: currentUser.employeeId,
+          type,
+          days_requested: parseFloat(document.getElementById('reqDays').value),
+          start_date: document.getElementById('reqStart').value,
+          end_date: document.getElementById('reqEnd').value,
+          reason: document.getElementById('reqReason').value
+        };
+
+        const startDt = new Date(body.start_date + 'T00:00:00');
+        const endDt = new Date(body.end_date + 'T00:00:00');
+        if (endDt < startDt) { alert('End date must be on or after start date.'); return; }
+        const calDays = Math.ceil((endDt - startDt) / (1000 * 60 * 60 * 24)) + 1;
+        if (body.days_requested > calDays) { alert(`Days requested (${body.days_requested}) exceeds the date range (${calDays} calendar days).`); return; }
+
+        const res = await fetch('/api/requests', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          alert('Request submitted successfully!');
+          document.getElementById('requestForm').reset();
+          loadData();
+          switchTab('myrequests');
+        } else {
+          alert('Error: ' + data.error);
+        }
+      }
+    }
+
+    async function loadMyRequests() {
+      const res = await fetch('/api/requests');
+      const requests = await res.json();
+      document.getElementById('myRequestsBody').innerHTML = requests.length ?
+        requests.map(r => {
+          const isPunch = r.type === 'punch_adjustment';
+          const typeBadge = isPunch ? 'punch' : (r.type === 'sick' ? 'inactive' : 'active');
+          const typeLabel = isPunch ? 'Punch Adj.' : esc(r.type);
+          return `
+            <tr>
+              <td data-label="Type"><span class="badge badge-${typeBadge}">${typeLabel}</span></td>
+              <td data-label="${isPunch ? 'Date' : 'Days'}" class="text-right">${isPunch ? r.punch_date : r.days_requested}</td>
+              <td data-label="${isPunch ? 'Clock-In' : 'Start'}">${isPunch ? r.clock_in : r.start_date}</td>
+              <td data-label="${isPunch ? 'Clock-Out' : 'End'}">${isPunch ? r.clock_out : r.end_date}</td>
+              <td data-label="Reason">${esc(r.reason || (isPunch && r.break_start ? 'Break: ' + esc(r.break_start) + '-' + esc(r.break_end) : ''))}</td>
+              <td data-label="Status"><span class="badge badge-${r.status}">${r.status}</span></td>
+              <td data-label="Reviewed By">${r.reviewed_by ? esc(r.reviewed_by) : '-'}</td>
+              <td>${r.status === 'pending' ? `<button class="btn btn-sm btn-danger" onclick="cancelRequest(${r.id})">Cancel</button>` : ''}</td>
+            </tr>
+          `;
+        }).join('') :
+        '<tr><td colspan="8" style="text-align:center; color:var(--text-light);">No requests yet</td></tr>';
+    }
+
+    async function cancelRequest(id) {
+      if (!confirm('Cancel this request?')) return;
+      const res = await fetch(`/api/requests/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) { loadData(); loadMyRequests(); }
+      else { alert('Error: ' + data.error); }
+    }
+
+    function switchTab(tab) {
+      document.querySelectorAll('[id^="tab-"]').forEach(el => el.style.display = 'none');
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById('tab-' + tab).style.display = '';
+      document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+      if (tab === 'myrequests') loadMyRequests();
+    }
+
+    async function logout() {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      window.location.href = '/login.html';
+    }
+  </script>
+</body>
+</html>

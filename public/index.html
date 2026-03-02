@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CFA La Rambla - PTO Tracker</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="/img/cfa-favicon.ico" type="image/x-icon">
+  <meta name="theme-color" content="#004F71">
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-brand">
+      <img src="/img/cfa-logo.gif" alt="Chick-fil-A" onerror="this.style.display='none'">
+      <div class="header-divider"></div>
+      <h1>PTO Tracker</h1>
+    </div>
+    <button class="hamburger-btn" onclick="toggleMobileMenu()" aria-label="Menu">&#9776;</button>
+    <div class="header-actions">
+      <span id="userInfo"></span>
+      <div style="position:relative;">
+        <button class="btn btn-sm notification-bell" id="notificationBell" onclick="toggleNotifications()">&#128276; <span id="notifCount" class="notif-count hidden">0</span></button>
+        <div id="notifDropdown" class="notif-dropdown hidden">
+          <div class="notif-header">Notifications</div>
+          <div id="notifList"></div>
+        </div>
+      </div>
+      <button class="btn btn-sm" onclick="showNotifSettings()" title="Notification Settings">&#9881; Settings</button>
+      <button class="btn btn-sm" onclick="showChangePassword()">Change Password</button>
+      <button class="btn btn-sm" onclick="logout()">Sign Out</button>
+    </div>
+  </header>
+
+  <div class="main-content">
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" data-tab="dashboard" onclick="switchTab('dashboard')">Dashboard</button>
+      <button class="tab" data-tab="employees" onclick="switchTab('employees')">Employees</button>
+      <button class="tab" data-tab="import" onclick="switchTab('import')">Import Data</button>
+      <button class="tab" data-tab="requests" onclick="switchTab('requests')">Time-Off Requests <span id="reqBadge" class="tab-badge hidden">0</span></button>
+      <button class="tab" data-tab="timeoff" onclick="switchTab('timeoff')">Record Time-Off</button>
+      <button class="tab" data-tab="tardiness" onclick="switchTab('tardiness')">Tardiness</button>
+      <button class="tab" data-tab="mealpenalty" onclick="switchTab('mealpenalty')">Meal Penalties</button>
+      <button class="tab" data-tab="accounts" onclick="switchTab('accounts')">User Accounts</button>
+    </div>
+
+    <!-- Alert Banner for Pending Requests -->
+    <div id="pendingRequestsAlert" class="alert-banner hidden" style="border-left-color: var(--cfa-red);">
+      <span class="alert-icon">&#128276;</span>
+      <div style="flex:1;">
+        <strong id="pendingRequestCount">0</strong> pending time-off request(s) need review.
+        <a href="#" onclick="switchTab('requests'); return false;">Review now</a>
+      </div>
+      <button class="alert-dismiss" onclick="dismissAlert('pendingRequestsAlert')" title="Dismiss">&#10005;</button>
+    </div>
+
+    <!-- Alert Banner for Flagged Employees -->
+    <div id="flaggedAlert" class="alert-banner hidden">
+      <span class="alert-icon">&#9888;</span>
+      <div style="flex:1;">
+        <strong id="flaggedCount">0</strong> employee(s) have had no hours for 4+ consecutive months.
+        <a href="#" onclick="switchTab('employees'); filterFlagged(); return false;">Review now</a>
+      </div>
+      <button class="alert-dismiss" onclick="dismissAlert('flaggedAlert')" title="Dismiss">&#10005;</button>
+    </div>
+
+    <!-- Stale Data Warning -->
+    <div id="staleDataAlert" class="alert-banner hidden" style="border-left-color: var(--cfa-blue);">
+      <span class="alert-icon">&#9200;</span>
+      <div style="flex:1;">
+        <strong>Data may be stale.</strong> Last import was <span id="staleDataDays">0</span> days ago.
+        <a href="#" onclick="switchTab('import'); return false;">Import new data</a>
+      </div>
+      <button class="alert-dismiss" onclick="dismissAlert('staleDataAlert')" title="Dismiss">&#10005;</button>
+    </div>
+
+    <!-- Dashboard Tab -->
+    <div id="tab-dashboard">
+      <div class="stats-grid">
+        <div class="stat-card"><div class="label">Active Employees</div><div class="value" id="statActive">-</div></div>
+        <div class="stat-card"><div class="label">Inactive Employees</div><div class="value" id="statInactive">-</div></div>
+        <div class="stat-card"><div class="label">Pending Requests</div><div class="value" id="statPending">-</div></div>
+        <div class="stat-card"><div class="label">Data Range</div><div class="value" id="statRange" style="font-size:1rem;">-</div></div>
+        <div class="stat-card"><div class="label">Last Backup</div><div class="value" id="statBackup" style="font-size:0.85rem;">-</div></div>
+      </div>
+
+      <div style="margin-bottom:1.25rem;">
+        <button class="btn btn-sm" onclick="triggerBackup()" id="backupBtn">&#128190; Backup Now</button>
+      </div>
+
+      <div id="ptoConcernsFilterBanner" class="alert-banner hidden" style="border-left-color: var(--cfa-yellow); margin-bottom:0.5rem;">
+        <span>Showing employees approaching PTO balance limits</span>
+        <a href="#" onclick="clearPtoConcernsFilter(); return false;" style="margin-left:1rem; font-weight:600;">✕ Clear filter</a>
+      </div>
+
+      <div class="table-container">
+        <div class="toolbar">
+          <input type="text" id="searchInput" placeholder="Search employees..." style="max-width:300px;" oninput="filterTable()">
+          <select id="statusFilter" onchange="filterTable()" style="width:auto;">
+            <option value="">All Status</option>
+            <option value="active" selected>Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+          <select id="typeFilter" onchange="filterTable()" style="width:auto;">
+            <option value="">All Types</option>
+            <option value="hourly">Hourly</option>
+            <option value="exempt">Exempt</option>
+          </select>
+          <div style="margin-left:auto; display:flex; gap:0.5rem;">
+            <button class="btn btn-sm" onclick="recalculate()">Recalculate</button>
+            <div style="position:relative;">
+              <button class="btn btn-sm" onclick="toggleExportMenu()">Export &#9660;</button>
+              <div id="exportMenu" class="dropdown-menu hidden">
+                <a href="/api/reports/export/csv" class="dropdown-item">CSV (All)</a>
+                <a href="#" class="dropdown-item" onclick="exportFilteredCSV(); return false;">CSV (Filtered)</a>
+                <a href="/api/reports/export/pdf" class="dropdown-item">PDF Report</a>
+                <a href="#" class="dropdown-item" onclick="showYearEndExport(); return false;">Year-End Summary</a>
+              </div>
+            </div>
+          </div>
+        </div>
+        <table class="responsive-table">
+          <thead>
+            <tr>
+              <th data-sort="name" data-label="Name" class="sortable" onclick="sortBy('name')">Name &#9650;</th>
+              <th data-sort="type" data-label="Type" class="sortable" onclick="sortBy('type')">Type</th>
+              <th data-sort="status" data-label="Status" class="sortable" onclick="sortBy('status')">Status</th>
+              <th data-sort="tenure" data-label="Tenure" class="sortable" onclick="sortBy('tenure')">Tenure</th>
+              <th data-sort="sick_earned" data-label="Sick Earned (days)" class="text-right sortable" onclick="sortBy('sick_earned')">Sick Earned (days)</th>
+              <th data-sort="sick_taken" data-label="Sick Taken (days)" class="text-right sortable" onclick="sortBy('sick_taken')">Sick Taken (days)</th>
+              <th data-sort="sick_bal" data-label="Sick Bal (days)" class="text-right sortable" onclick="sortBy('sick_bal')">Sick Bal (days)</th>
+              <th data-sort="vac_earned" data-label="Vac Earned (days)" class="text-right sortable" onclick="sortBy('vac_earned')">Vac Earned (days)</th>
+              <th data-sort="vac_taken" data-label="Vac Taken (days)" class="text-right sortable" onclick="sortBy('vac_taken')">Vac Taken (days)</th>
+              <th data-sort="vac_bal" data-label="Vac Bal (days)" class="text-right sortable" onclick="sortBy('vac_bal')">Vac Bal (days)</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="summaryBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Employees Tab -->
+    <div id="tab-employees" style="display:none;">
+      <div id="flaggedList"></div>
+      <div class="table-container">
+        <div class="toolbar">
+          <input type="text" id="empSearch" placeholder="Search..." style="max-width:300px;" oninput="filterEmployeeTable()">
+          <select id="empTypeFilter" onchange="filterEmployeeTable()" style="width:auto;">
+            <option value="">All Types</option>
+            <option value="hourly">Hourly</option>
+            <option value="exempt">Exempt</option>
+          </select>
+          <select id="empStatusFilter" onchange="filterEmployeeTable()" style="width:auto;">
+            <option value="">All Status</option>
+            <option value="active" selected>Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+          <button class="btn btn-sm btn-primary" style="margin-left:auto;" onclick="showAddEmployee()">+ Add Employee</button>
+        </div>
+        <table class="responsive-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Type</th>
+              <th>Status</th>
+              <th>First Clock-In</th>
+              <th>Flagged</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="employeeBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Import Tab -->
+    <div id="tab-import" style="display:none;">
+      <div class="detail-panel">
+        <h2>Import Wage Export Data</h2>
+        <p style="color:var(--text-light); margin-bottom:1rem;">Upload your payroll wage export file (Excel or CSV). The system will parse it, create/update employees, and recalculate accruals.</p>
+
+        <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+          <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" onchange="handleFileSelect(this)">
+          <svg class="upload-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"/></svg>
+          <p class="upload-label">Click to upload or drag and drop</p>
+          <p class="upload-sublabel">.xlsx, .xls, or .csv files</p>
+        </div>
+
+        <div id="previewSection" style="display:none; margin-top:1.5rem;">
+          <h3 style="margin-bottom:0.75rem; color: var(--cfa-navy);">Import Preview</h3>
+          <div id="previewStats" class="stats-grid"></div>
+          <div class="table-container" style="max-height:400px; overflow-y:auto;">
+            <table>
+              <thead><tr><th>Employee</th><th>Months</th><th class="text-right">Total Hours</th><th>Date Range</th></tr></thead>
+              <tbody id="previewBody"></tbody>
+            </table>
+          </div>
+          <div style="margin-top:1rem; display:flex; gap:0.75rem;">
+            <button class="btn btn-primary" onclick="commitImport()">Confirm Import</button>
+            <button class="btn" onclick="cancelImport()">Cancel</button>
+          </div>
+        </div>
+
+        <div id="importResult" style="display:none; margin-top:1.5rem;" class="detail-panel"></div>
+      </div>
+    </div>
+
+    <!-- Time-Off Requests Tab -->
+    <div id="tab-requests" style="display:none;">
+      <div class="table-container">
+        <div class="toolbar">
+          <select id="reqStatusFilter" onchange="loadRequests()" style="width:auto;">
+            <option value="">All</option>
+            <option value="pending" selected>Pending</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+          </select>
+        </div>
+        <table class="responsive-table">
+          <thead>
+            <tr>
+              <th>Employee</th>
+              <th>Type</th>
+              <th>Days</th>
+              <th>Start</th>
+              <th>End</th>
+              <th>Reason</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="requestsBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Record Time-Off Tab -->
+    <div id="tab-timeoff" style="display:none;">
+      <div class="detail-panel" style="max-width:600px;">
+        <h2>Record Time-Off Taken</h2>
+        <form id="timeOffForm" onsubmit="submitTimeOff(event)">
+          <div class="form-group">
+            <label for="toEmployee">Employee</label>
+            <select id="toEmployee" required></select>
+            <label style="display:inline-flex; align-items:center; gap:0.4rem; margin-top:0.4rem; font-size:0.8rem; color:var(--text-light); cursor:pointer;">
+              <input type="checkbox" id="toShowInactive" onchange="loadTimeOffForm()"> Include inactive employees
+            </label>
+          </div>
+          <div class="form-group">
+            <label for="toType">Type</label>
+            <select id="toType" required onchange="onTimeOffTypeChange()">
+              <option value="sick">Sick</option>
+              <option value="vacation">Vacation</option>
+              <option value="vacation_liquidation">Vacation Liquidation (Payout)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="toDays">Days</label>
+            <div style="display:flex; gap:0.5rem; align-items:center;">
+              <input type="number" id="toDays" step="0.125" min="0.125" required style="flex:1;">
+              <button type="button" class="btn btn-sm" id="liquidateAllBtn" style="display:none;" onclick="fillVacationBalance()">Use Full Balance</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="toDate">Date</label>
+            <input type="date" id="toDate" required>
+          </div>
+          <div class="form-group">
+            <label for="toNotes">Notes</label>
+            <textarea id="toNotes" rows="2"></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary">Record Time-Off</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Tardiness Tab -->
+    <div id="tab-tardiness" style="display:none;">
+      <div class="detail-panel">
+        <h2>Tardiness Analysis</h2>
+        <p style="color:var(--text-light); margin-bottom:1rem;">Upload a Cowork Punch Variance Report (PDF) to analyze employee clock-in tardiness, generate reports, and auto-post results to Slack.</p>
+
+        <div class="upload-area" id="tardinessUploadArea" onclick="document.getElementById('tardinessFileInput').click()">
+          <input type="file" id="tardinessFileInput" accept=".pdf" style="display:none;" onchange="handleTardinessFile(this)">
+          <svg class="upload-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0 3 3m-3-3-3 3M6.75 19.5a4.5 4.5 0 0 1-1.41-8.775 5.25 5.25 0 0 1 10.233-2.33 3 3 0 0 1 3.758 3.848A3.752 3.752 0 0 1 18 19.5H6.75Z"/></svg>
+          <p class="upload-label">Click to upload or drag and drop</p>
+          <p class="upload-sublabel">Punch Variance Report (.pdf)</p>
+        </div>
+
+        <!-- Preview Section -->
+        <div id="tardinessPreview" style="display:none; margin-top:1.5rem;">
+          <h3 style="margin-bottom:0.75rem; color: var(--cfa-navy);">Analysis Preview</h3>
+          <div id="tardinessPreviewStats" class="stats-grid"></div>
+
+          <div id="tardinessInfractionsList" style="margin-top:1rem;">
+            <div class="section-header">
+              <span class="indicator" style="background:var(--cfa-red);"></span>
+              <h4>Infractions (≥10 min late)</h4>
+              <span class="section-count" id="infractionCount">0</span>
+            </div>
+            <div class="table-container" style="max-height:300px; overflow-y:auto;">
+              <table>
+                <thead><tr><th>Employee</th><th>Date</th><th>Scheduled</th><th>Actual</th><th class="text-right">Minutes Late</th><th style="width:40px;"></th></tr></thead>
+                <tbody id="tardinessInfractionsBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div id="tardinessFlagsList" style="margin-top:1rem;">
+            <div class="section-header">
+              <span class="indicator" style="background:var(--cfa-yellow);"></span>
+              <h4>Flags (5–10 min late)</h4>
+              <span class="section-count" id="flagCountBadge">0</span>
+            </div>
+            <div class="table-container" style="max-height:200px; overflow-y:auto;">
+              <table>
+                <thead><tr><th>Employee</th><th>Date</th><th>Scheduled</th><th>Actual</th><th class="text-right">Minutes Late</th></tr></thead>
+                <tbody id="tardinessFlagsBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div id="tardinessAbsencesList" style="margin-top:1rem;">
+            <div class="section-header">
+              <span class="indicator" style="background:var(--cfa-navy);"></span>
+              <h4>Absences (No Clock-In)</h4>
+              <span class="section-count" id="absenceCount">0</span>
+            </div>
+            <div class="table-container" style="max-height:200px; overflow-y:auto;">
+              <table>
+                <thead><tr><th>Employee</th><th>Date</th><th>Scheduled In</th><th>Scheduled Out</th></tr></thead>
+                <tbody id="tardinessAbsencesBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div style="margin-top:1rem; display:flex; gap:0.75rem;">
+            <button class="btn btn-primary" onclick="commitTardiness(this)">Save & Post to Slack</button>
+            <button class="btn" onclick="cancelTardiness()">Cancel</button>
+          </div>
+        </div>
+
+        <!-- Result Section -->
+        <div id="tardinessResult" style="display:none; margin-top:1.5rem;" class="detail-panel"></div>
+      </div>
+
+      <!-- History -->
+      <div style="margin-top:2rem;">
+        <h3 class="section-title"><span class="section-title-icon">&#128203;</span> Previous Reports</h3>
+        <div class="table-container">
+          <table class="responsive-table">
+            <thead>
+              <tr>
+                <th>Pay Period</th>
+                <th class="text-right">Employees</th>
+                <th class="text-right">Infractions</th>
+                <th class="text-right">Flags</th>
+                <th class="text-right">Absences</th>
+                <th>Uploaded</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="tardinessHistoryBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Meal Penalties Tab -->
+    <div id="tab-mealpenalty" style="display:none;">
+      <div class="detail-panel">
+        <h2>Meal Penalty Analysis</h2>
+        <p style="color:var(--text-light); margin-bottom:1rem;">Upload a Cowork Employee Time Detail Report (PDF) to detect meal penalty violations. A meal penalty occurs when an employee works more than 6 consecutive hours without taking any break.</p>
+
+        <div class="upload-area" id="mealPenaltyUploadArea" onclick="document.getElementById('mealPenaltyFileInput').click()">
+          <input type="file" id="mealPenaltyFileInput" accept=".pdf" style="display:none;" onchange="handleMealPenaltyFile(this)">
+          <svg class="upload-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0 3 3m-3-3-3 3M6.75 19.5a4.5 4.5 0 0 1-1.41-8.775 5.25 5.25 0 0 1 10.233-2.33 3 3 0 0 1 3.758 3.848A3.752 3.752 0 0 1 18 19.5H6.75Z"/></svg>
+          <p class="upload-label">Click to upload or drag and drop</p>
+          <p class="upload-sublabel">Employee Time Detail Report (.pdf)</p>
+        </div>
+
+        <!-- Preview Section -->
+        <div id="mealPenaltyPreview" style="display:none; margin-top:1.5rem;">
+          <h3 style="margin-bottom:0.75rem; color: var(--cfa-navy);">Analysis Preview</h3>
+          <div id="mealPenaltyPreviewStats" class="stats-grid"></div>
+
+          <div style="margin-top:1rem;">
+            <div class="section-header">
+              <span class="indicator" style="background:var(--cfa-red);"></span>
+              <h4>Meal Penalty Violations</h4>
+              <span class="section-count" id="mealPenaltyCount">0</span>
+            </div>
+            <div class="table-container" style="max-height:400px; overflow-y:auto;">
+              <table>
+                <thead><tr><th>Employee</th><th>Date</th><th>Shift Period</th><th class="text-right">Consecutive Hours</th></tr></thead>
+                <tbody id="mealPenaltyPreviewBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div style="margin-top:1rem; display:flex; gap:0.75rem;">
+            <button class="btn btn-primary" onclick="commitMealPenalty(this)">Save Report</button>
+            <button class="btn" onclick="cancelMealPenalty()">Cancel</button>
+          </div>
+        </div>
+
+        <!-- Result Section -->
+        <div id="mealPenaltyResult" style="display:none; margin-top:1.5rem;" class="detail-panel"></div>
+      </div>
+
+      <!-- History -->
+      <div style="margin-top:2rem;">
+        <h3 class="section-title"><span class="section-title-icon">&#128203;</span> Previous Reports</h3>
+        <div class="table-container">
+          <table class="responsive-table">
+            <thead>
+              <tr>
+                <th>Date Range</th>
+                <th class="text-right">Employees</th>
+                <th class="text-right">Penalties</th>
+                <th class="text-right">With Penalties</th>
+                <th>Uploaded</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="mealPenaltyHistoryBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- User Accounts Tab -->
+    <div id="tab-accounts" style="display:none;">
+      <div class="table-container">
+        <div class="toolbar">
+          <span style="font-size:0.875rem; color:var(--text-light);">Manage employee login accounts. PIN is used as username; employees set their own password on first login.</span>
+          <button class="btn btn-sm btn-primary" style="margin-left:auto;" onclick="showCreateAccount()">+ Create Account</button>
+        </div>
+        <table class="responsive-table">
+          <thead>
+            <tr>
+              <th>Username (PIN)</th>
+              <th>Employee</th>
+              <th>Role</th>
+              <th>Password Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="accountsBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Account Modal -->
+  <div id="createAccountModal" class="modal-overlay hidden">
+    <div class="modal" style="max-width:450px;">
+      <h2>Create Employee Account</h2>
+      <form id="createAccountForm" onsubmit="submitCreateAccount(event)">
+        <div class="form-group">
+          <label for="acctEmployee">Employee</label>
+          <select id="acctEmployee" required></select>
+        </div>
+        <div class="form-group">
+          <label for="acctPin">Clock-In PIN (used as username)</label>
+          <input type="text" id="acctPin" required placeholder="e.g. 732968">
+        </div>
+        <p style="color:var(--text-light); font-size:0.8rem; margin-bottom:1rem;">The PIN will be the username. On first login, the employee enters their PIN as both username and password, then creates their own password.</p>
+        <div class="modal-actions">
+          <button type="button" class="btn" onclick="closeCreateAccount()">Cancel</button>
+          <button type="submit" class="btn btn-primary">Create Account</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Employee Detail Modal -->
+  <div id="detailModal" class="modal-overlay hidden">
+    <div class="modal">
+      <div class="detail-header">
+        <h2 id="detailName"></h2>
+        <div style="display:flex; gap:0.5rem;">
+          <button class="btn btn-sm" onclick="exportStatement()">Export PDF</button>
+          <button class="btn btn-sm" onclick="closeDetail()">Close</button>
+        </div>
+      </div>
+      <div id="detailStats" class="detail-stats"></div>
+      <h3 style="margin-bottom:0.75rem; color: var(--cfa-navy);">Monthly Breakdown</h3>
+      <div class="table-container" style="max-height:400px; overflow-y:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Month</th>
+              <th class="text-right">Hours</th>
+              <th class="text-center">Qualified</th>
+              <th class="text-right">Sick Earned</th>
+              <th class="text-right">Vac Earned</th>
+              <th>Vac Rate</th>
+            </tr>
+          </thead>
+          <tbody id="detailBody"></tbody>
+        </table>
+      </div>
+      <h3 style="margin: 1rem 0 0.75rem; color: var(--cfa-navy);">Time-Off History</h3>
+      <div class="table-container" style="max-height:200px; overflow-y:auto;">
+        <table>
+          <thead><tr><th>Date</th><th>Type</th><th class="text-right">Days</th><th>Notes</th><th></th></tr></thead>
+          <tbody id="detailTimeOff"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Employee Modal -->
+  <div id="editModal" class="modal-overlay hidden">
+    <div class="modal" style="max-width:400px;">
+      <h2>Edit Employee</h2>
+      <form id="editForm" onsubmit="saveEmployee(event)">
+        <input type="hidden" id="editId">
+        <div class="form-group">
+          <label>Name</label>
+          <input type="text" id="editName" disabled>
+        </div>
+        <div class="form-group">
+          <label for="editType">Employee Type</label>
+          <select id="editType">
+            <option value="hourly">Hourly</option>
+            <option value="exempt">Exempt</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="editStatus">Status</label>
+          <select id="editStatus">
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="editEmail">Email (for notifications)</label>
+          <input type="email" id="editEmail" placeholder="employee@email.com">
+        </div>
+        <div class="form-group">
+          <label for="editSlackId">Slack User ID <small style="color:var(--text-light);">(for DM notifications)</small></label>
+          <input type="text" id="editSlackId" placeholder="e.g. U07ABC123">
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn" onclick="closeEdit()">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add Employee Modal -->
+  <div id="addEmployeeModal" class="modal-overlay hidden">
+    <div class="modal" style="max-width:450px;">
+      <h2>Add Employee</h2>
+      <form id="addEmployeeForm" onsubmit="submitAddEmployee(event)">
+        <div class="form-group">
+          <label for="addFirstName">First Name</label>
+          <input type="text" id="addFirstName" required>
+        </div>
+        <div class="form-group">
+          <label for="addLastName">Last Name</label>
+          <input type="text" id="addLastName" required>
+        </div>
+        <div class="form-group">
+          <label for="addType">Employee Type</label>
+          <select id="addType">
+            <option value="exempt">Exempt</option>
+            <option value="hourly">Hourly</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="addStartDate">Start Date</label>
+          <input type="date" id="addStartDate" required>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn" onclick="closeAddEmployee()">Cancel</button>
+          <button type="submit" class="btn btn-primary">Add Employee</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Change Password Modal -->
+  <div id="changePasswordModal" class="modal-overlay hidden">
+    <div class="modal" style="max-width:400px;">
+      <h2>Change Admin Password</h2>
+      <form id="changePasswordForm" onsubmit="submitChangePassword(event)">
+        <div class="form-group">
+          <label for="cpCurrent">Current Password</label>
+          <input type="password" id="cpCurrent" required>
+        </div>
+        <div class="form-group">
+          <label for="cpNew">New Password</label>
+          <input type="password" id="cpNew" required minlength="6" placeholder="At least 6 characters">
+        </div>
+        <div class="form-group">
+          <label for="cpConfirm">Confirm New Password</label>
+          <input type="password" id="cpConfirm" required>
+        </div>
+        <div id="cpError" style="color: var(--danger); font-size: 0.875rem; margin-bottom: 1rem; display: none;"></div>
+        <div class="modal-actions">
+          <button type="button" class="btn" onclick="closeChangePassword()">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Password</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Notification Settings Modal -->
+  <div id="notifSettingsModal" class="modal-overlay hidden">
+    <div class="modal" style="max-width:500px;">
+      <h2>Notification Settings</h2>
+      <form id="notifSettingsForm" onsubmit="saveNotifSettings(event)">
+        <div class="form-group">
+          <label for="adminEmail">Admin Notification Email</label>
+          <input type="email" id="adminEmail" placeholder="admin@cfalarambla.com">
+        </div>
+        <div class="form-group">
+          <label style="display:flex; align-items:center; gap:0.5rem;">
+            <input type="checkbox" id="notifOnSubmit" checked style="width:auto;">
+            Email when employee submits request
+          </label>
+        </div>
+        <div class="form-group">
+          <label style="display:flex; align-items:center; gap:0.5rem;">
+            <input type="checkbox" id="notifWeeklyDigest" checked style="width:auto;">
+            Weekly digest of pending requests (Monday 9 AM)
+          </label>
+        </div>
+        <div id="emailConfigStatus" style="margin-bottom:1rem; font-size:0.8125rem;"></div>
+        <div class="modal-actions">
+          <button type="button" class="btn" onclick="closeNotifSettings()">Cancel</button>
+          <button type="button" class="btn" onclick="testEmail()">Send Test</button>
+          <button type="submit" class="btn btn-primary">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>

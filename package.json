@@ -1,0 +1,22 @@
+{
+  "name": "cfa-pto-tracker",
+  "version": "1.0.0",
+  "description": "PTO accrual tracker for vacation and sick day management",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "setup": "node server/setup.js",
+    "migrate": "node server/migrate-workbook.js"
+  },
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "better-sqlite3": "^11.7.0",
+    "connect-sqlite3": "^0.9.15",
+    "express": "^4.21.0",
+    "express-session": "^1.18.1",
+    "multer": "^1.4.5-lts.1",
+    "nodemailer": "^8.0.1",
+    "pdfkit": "^0.17.2",
+    "xlsx": "^0.18.5"
+  }
+}
