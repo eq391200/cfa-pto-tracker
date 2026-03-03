@@ -746,7 +746,7 @@ function drawInfractionNotice(doc, record, report) {
   const minutesLate = Math.abs(record.clockin_variance_minutes || 0);
 
   // Header
-  doc.fontSize(20).fillColor(COLORS.navy).text('CFA La Rambla', { align: 'center' });
+  doc.fontSize(20).fillColor(COLORS.navy).text('La Rambla', { align: 'center' });
   doc.moveDown(0.3);
   doc.fontSize(16).fillColor(COLORS.dark).text('Tardiness Infraction Notice', { align: 'center' });
   doc.moveDown(0.2);

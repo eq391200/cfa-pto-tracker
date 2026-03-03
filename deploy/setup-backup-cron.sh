@@ -4,7 +4,7 @@
 
 APP_DIR="/opt/pto-tracker"
 NODE_PATH=$(which node)
-LOG_FILE="/var/log/pto-backup.log"
+LOG_FILE="/var/log/admin-hub-backup.log"
 
 CRON_LINE="0 2 * * * cd $APP_DIR && $NODE_PATH server/backup.js >> $LOG_FILE 2>&1"
 
@@ -24,14 +24,14 @@ else
 fi
 
 # Also setup weekly digest cron if not present
-DIGEST_CRON="0 9 * * 1 cd $APP_DIR && $NODE_PATH server/weekly-digest.js >> /var/log/pto-digest.log 2>&1"
+DIGEST_CRON="0 9 * * 1 cd $APP_DIR && $NODE_PATH server/weekly-digest.js >> /var/log/admin-hub-digest.log 2>&1"
 if ! crontab -l 2>/dev/null | grep -q "weekly-digest.js"; then
   (crontab -l 2>/dev/null; echo "$DIGEST_CRON") | crontab -
   echo "✓ Weekly digest cron installed: Monday at 9:00 AM"
 fi
 
 # Anniversary check (1st of every month at 8 AM)
-ANNIV_CRON="0 8 1 * * cd $APP_DIR && $NODE_PATH server/anniversary-check.js >> /var/log/pto-anniversary.log 2>&1"
+ANNIV_CRON="0 8 1 * * cd $APP_DIR && $NODE_PATH server/anniversary-check.js >> /var/log/admin-hub-anniversary.log 2>&1"
 if ! crontab -l 2>/dev/null | grep -q "anniversary-check.js"; then
   (crontab -l 2>/dev/null; echo "$ANNIV_CRON") | crontab -
   echo "✓ Anniversary check cron installed: 1st of every month at 8:00 AM"

@@ -1,5 +1,5 @@
 /**
- * CFA La Rambla — PTO Tracker Admin Dashboard
+ * La Rambla — Restaurant Admin Hub
  *
  * Single-page app controlling all admin tabs: Dashboard, Employees,
  * Import, Time-Off, Requests, Accounts, Reports, and Settings.
@@ -1036,7 +1036,7 @@ async function showNotifSettings() {
     if (data.email_configured) {
       statusEl.innerHTML = '<span style="color:green;">✓ SMTP configured</span>';
     } else {
-      statusEl.innerHTML = '<span style="color:var(--cfa-red);">✗ SMTP not configured — set SMTP_HOST, SMTP_USER, SMTP_PASS in .env</span>';
+      statusEl.innerHTML = '<span style="color:var(--brand-red);">✗ SMTP not configured — set SMTP_HOST, SMTP_USER, SMTP_PASS in .env</span>';
     }
   } catch {
     // Modal shown with defaults
@@ -1154,7 +1154,7 @@ async function uploadTardinessFile(file) {
           <td>${esc(r.date)}</td>
           <td>${esc(r.scheduledIn || '-')}</td>
           <td>${esc(r.actualIn || '-')}</td>
-          <td class="text-right" style="color:var(--cfa-red); font-weight:600;">${esc(r.minutesLate)}</td>
+          <td class="text-right" style="color:var(--brand-red); font-weight:600;">${esc(r.minutesLate)}</td>
           <td><button class="btn-remove" onclick="removePreviewInfraction(${i})" title="Remove infraction">&times;</button></td>
         </tr>`).join('')
       : `<tr><td colspan="6"><div class="empty-state"><span class="empty-state-icon">&#10003;</span><span class="empty-state-text">No infractions</span></div></td></tr>`;
@@ -1227,7 +1227,7 @@ async function commitTardiness(btn) {
           </div>
           <div class="result-stats">
             <div class="result-stat"><div class="result-stat-value">${esc(r.totalEmployees)}</div><div class="result-stat-label">Employees</div></div>
-            <div class="result-stat"><div class="result-stat-value" style="color:var(--cfa-red);">${esc(r.infractions)}</div><div class="result-stat-label">Infractions</div></div>
+            <div class="result-stat"><div class="result-stat-value" style="color:var(--brand-red);">${esc(r.infractions)}</div><div class="result-stat-label">Infractions</div></div>
             <div class="result-stat"><div class="result-stat-value" style="color:#D97706;">${esc(r.flags)}</div><div class="result-stat-label">Flags</div></div>
             <div class="result-stat"><div class="result-stat-value">${esc(r.absences)}</div><div class="result-stat-label">Absences</div></div>
           </div>
@@ -1301,7 +1301,7 @@ async function loadTardinessHistory() {
         <tr>
           <td data-label="Pay Period">${esc(r.pay_period_start)} to ${esc(r.pay_period_end)}</td>
           <td data-label="Employees" class="text-right">${esc(r.total_employees)}</td>
-          <td data-label="Infractions" class="text-right" style="color:var(--cfa-red); font-weight:600;">${esc(r.infraction_count)}</td>
+          <td data-label="Infractions" class="text-right" style="color:var(--brand-red); font-weight:600;">${esc(r.infraction_count)}</td>
           <td data-label="Flags" class="text-right" style="color:#d97706;">${esc(r.flag_count)}</td>
           <td data-label="Absences" class="text-right">${esc(r.absence_count)}</td>
           <td data-label="Uploaded">${esc(new Date(r.created_at).toLocaleDateString())}</td>
@@ -1413,7 +1413,7 @@ async function uploadMealPenaltyFile(file) {
           <td>${esc(r.employeeName)}</td>
           <td>${esc(r.date)}</td>
           <td>${esc(r.shiftDetail)}</td>
-          <td class="text-right" style="color:var(--cfa-red); font-weight:600;">${esc(r.consecutiveFormatted)}</td>
+          <td class="text-right" style="color:var(--brand-red); font-weight:600;">${esc(r.consecutiveFormatted)}</td>
         </tr>`).join('')
       : `<tr><td colspan="4"><div class="empty-state"><span class="empty-state-icon">&#10003;</span><span class="empty-state-text">No meal penalties found</span></div></td></tr>`;
 
@@ -1459,7 +1459,7 @@ async function commitMealPenalty(btn) {
           </div>
           <div class="result-stats">
             <div class="result-stat"><div class="result-stat-value">${esc(r.totalEmployees)}</div><div class="result-stat-label">Employees</div></div>
-            <div class="result-stat"><div class="result-stat-value" style="color:var(--cfa-red);">${esc(r.totalPenalties)}</div><div class="result-stat-label">Penalties</div></div>
+            <div class="result-stat"><div class="result-stat-value" style="color:var(--brand-red);">${esc(r.totalPenalties)}</div><div class="result-stat-label">Penalties</div></div>
             <div class="result-stat"><div class="result-stat-value">${esc(r.employeesWithPenalties)}</div><div class="result-stat-label">With Penalties</div></div>
             <div class="result-stat"><div class="result-stat-value" style="color:var(--success);">${esc(r.employeesClean)}</div><div class="result-stat-label">Clean</div></div>
           </div>
@@ -1502,7 +1502,7 @@ async function loadMealPenaltyHistory() {
         <tr>
           <td data-label="Date Range">${esc(r.date_range_start)} to ${esc(r.date_range_end)}</td>
           <td data-label="Employees" class="text-right">${esc(r.total_employees)}</td>
-          <td data-label="Penalties" class="text-right" style="color:var(--cfa-red); font-weight:600;">${esc(r.total_penalties)}</td>
+          <td data-label="Penalties" class="text-right" style="color:var(--brand-red); font-weight:600;">${esc(r.total_penalties)}</td>
           <td data-label="With Penalties" class="text-right">${esc(r.employees_with_penalties)}</td>
           <td data-label="Uploaded">${esc(new Date(r.created_at).toLocaleDateString())}</td>
           <td>

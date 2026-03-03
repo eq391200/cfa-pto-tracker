@@ -277,7 +277,7 @@ function notifyAdminOfRequest(db, employeeId, request) {
           msg = `📋 *${employeeName}* submitted a *${request.type}* request for ${request.days_requested} day${request.days_requested !== 1 ? 's' : ''} (${request.start_date} to ${request.end_date}).`;
         }
         if (request.reason) msg += `\n📝 Notes: ${request.reason}`;
-        msg += `\n<https://cfalarambla.com|Review on PTO Tracker>`;
+        msg += `\n<https://cfalarambla.com|Review on Admin Hub>`;
         sendSlackDM(adminSlackId, msg)
           .catch(err => console.error('Admin Slack DM notification failed:', err.message));
       }

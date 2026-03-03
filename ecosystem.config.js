@@ -1,6 +1,6 @@
 module.exports = {
   apps: [{
-    name: 'pto-tracker',
+    name: 'admin-hub',
     script: 'server/index.js',
     env: {
       NODE_ENV: 'production',

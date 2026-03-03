@@ -54,7 +54,7 @@ function sendMail({ from, to, subject, html }) {
   return new Promise((resolve, reject) => {
     const payload = JSON.stringify({
       personalizations: [{ to: [{ email: to }] }],
-      from: { email: from, name: 'CFA La Rambla PTO Tracker' },
+      from: { email: from, name: 'La Rambla Restaurant Admin Hub' },
       subject,
       content: [{ type: 'text/html', value: html }]
     });
@@ -95,19 +95,19 @@ function sendMail({ from, to, subject, html }) {
 
 // ── Email Templates ─────────────────────────────────────────────────
 
-/** Wrap body content in CFA-branded HTML email template. */
+/** Wrap body content in branded HTML email template. */
 function htmlTemplate(title, body) {
   return `
     <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; max-width:600px; margin:0 auto; background:#fff;">
       <div style="background:#004F71; padding:16px 24px; text-align:center;">
-        <h1 style="color:#fff; font-size:18px; margin:0;">CFA La Rambla — PTO Tracker</h1>
+        <h1 style="color:#fff; font-size:18px; margin:0;">La Rambla — Restaurant Admin Hub</h1>
       </div>
       <div style="padding:24px;">
         <h2 style="color:#004F71; font-size:16px; margin:0 0 16px;">${title}</h2>
         ${body}
       </div>
       <div style="background:#F5F4F2; padding:12px 24px; font-size:12px; color:#5B6770; text-align:center;">
-        This is an automated message from the PTO Tracker system.
+        This is an automated message from the Restaurant Admin Hub.
       </div>
     </div>
   `;
@@ -150,7 +150,7 @@ async function sendRequestSubmitted(employeeName, request, adminEmail) {
 
   const subject = isPunch
     ? `Punch Adjustment: ${employeeName} - ${request.punch_date}`
-    : `PTO Request: ${employeeName} - ${request.type} (${request.days_requested} days)`;
+    : `Time-Off Request: ${employeeName} - ${request.type} (${request.days_requested} days)`;
 
   try {
     await sendMail({ from: getFromAddress(), to: adminEmail, subject, html });
@@ -188,13 +188,13 @@ async function sendRequestReviewed(employeeName, status, employeeEmail, request)
         <tr><td style="padding:6px 0; color:#5B6770;">Status:</td><td style="padding:6px 0; font-weight:600; color:${statusColor};">${statusLabel}</td></tr>
         ${request.review_notes ? `<tr><td style="padding:6px 0; color:#5B6770;">Notes:</td><td style="padding:6px 0;">${escapeHtml(request.review_notes)}</td></tr>` : ''}
       </table>
-      <p><a href="https://cfalarambla.com" style="display:inline-block; background:#004F71; color:#fff; padding:10px 20px; border-radius:6px; text-decoration:none; font-weight:600;">View My Time Off</a></p>
+      <p><a href="https://cfalarambla.com" style="display:inline-block; background:#004F71; color:#fff; padding:10px 20px; border-radius:6px; text-decoration:none; font-weight:600;">View Employee Portal</a></p>
     `
   );
 
   const subject = isPunch
     ? `Punch Adjustment ${statusLabel}: ${request.punch_date}`
-    : `PTO Request ${statusLabel}: ${request.type} (${request.days_requested} days)`;
+    : `Time-Off Request ${statusLabel}: ${request.type} (${request.days_requested} days)`;
 
   try {
     await sendMail({ from: getFromAddress(), to: employeeEmail, subject, html });
@@ -220,9 +220,9 @@ async function sendWeeklyDigest(adminEmail, pendingRequests, stats) {
   }
 
   const html = htmlTemplate(
-    'Weekly PTO Digest',
+    'Weekly Admin Digest',
     `
-      <p>Here is your weekly PTO summary:</p>
+      <p>Here is your weekly summary:</p>
       <table style="width:100%; border-collapse:collapse; margin:12px 0;">
         <tr><td style="padding:6px 0; color:#5B6770;">Active Employees:</td><td style="padding:6px 0;">${stats.totalActive}</td></tr>
         <tr><td style="padding:6px 0; color:#5B6770;">Pending Requests:</td><td style="padding:6px 0; font-weight:600; color:${stats.pendingRequests > 0 ? '#DD0033' : '#249E6B'};">${stats.pendingRequests}</td></tr>
@@ -238,7 +238,7 @@ async function sendWeeklyDigest(adminEmail, pendingRequests, stats) {
     await sendMail({
       from: getFromAddress(),
       to: adminEmail,
-      subject: `PTO Weekly Digest — ${pendingRequests.length} pending request(s)`,
+      subject: `Weekly Admin Digest — ${pendingRequests.length} pending request(s)`,
       html
     });
   } catch (err) {
@@ -252,13 +252,13 @@ async function sendTestEmail(toEmail) {
 
   const html = htmlTemplate(
     'Test Email',
-    '<p>This is a test email from the CFA La Rambla PTO Tracker. If you received this, email notifications are working correctly.</p>'
+    '<p>This is a test email from the La Rambla Restaurant Admin Hub. If you received this, email notifications are working correctly.</p>'
   );
 
   await sendMail({
     from: getFromAddress(),
     to: toEmail,
-    subject: 'PTO Tracker - Test Email',
+    subject: 'Restaurant Admin Hub - Test Email',
     html
   });
 }

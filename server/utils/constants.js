@@ -1,5 +1,5 @@
 /**
- * Shared constants used across the PTO Tracker application.
+ * Shared constants used across the Restaurant Admin Hub application.
  * Centralizes values that were previously duplicated in multiple files.
  */
 

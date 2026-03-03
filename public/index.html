@@ -3,17 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CFA La Rambla - PTO Tracker</title>
+  <title>La Rambla — Restaurant Admin Hub</title>
   <link rel="stylesheet" href="/css/style.css">
-  <link rel="icon" href="/img/cfa-favicon.ico" type="image/x-icon">
+  <link rel="icon" href="/img/favicon.ico" type="image/x-icon">
   <meta name="theme-color" content="#004F71">
 </head>
 <body>
   <header class="app-header">
     <div class="header-brand">
-      <img src="/img/cfa-logo.gif" alt="Chick-fil-A" onerror="this.style.display='none'">
+      <img src="/img/logo.png" alt="La Rambla" onerror="this.style.display='none'">
       <div class="header-divider"></div>
-      <h1>PTO Tracker</h1>
+      <h1>Admin Hub</h1>
     </div>
     <button class="hamburger-btn" onclick="toggleMobileMenu()" aria-label="Menu">&#9776;</button>
     <div class="header-actions">
@@ -45,7 +45,7 @@
     </div>
 
     <!-- Alert Banner for Pending Requests -->
-    <div id="pendingRequestsAlert" class="alert-banner hidden" style="border-left-color: var(--cfa-red);">
+    <div id="pendingRequestsAlert" class="alert-banner hidden" style="border-left-color: var(--brand-red);">
       <span class="alert-icon">&#128276;</span>
       <div style="flex:1;">
         <strong id="pendingRequestCount">0</strong> pending time-off request(s) need review.
@@ -65,7 +65,7 @@
     </div>
 
     <!-- Stale Data Warning -->
-    <div id="staleDataAlert" class="alert-banner hidden" style="border-left-color: var(--cfa-blue);">
+    <div id="staleDataAlert" class="alert-banner hidden" style="border-left-color: var(--brand-blue);">
       <span class="alert-icon">&#9200;</span>
       <div style="flex:1;">
         <strong>Data may be stale.</strong> Last import was <span id="staleDataDays">0</span> days ago.
@@ -88,7 +88,7 @@
         <button class="btn btn-sm" onclick="triggerBackup()" id="backupBtn">&#128190; Backup Now</button>
       </div>
 
-      <div id="ptoConcernsFilterBanner" class="alert-banner hidden" style="border-left-color: var(--cfa-yellow); margin-bottom:0.5rem;">
+      <div id="ptoConcernsFilterBanner" class="alert-banner hidden" style="border-left-color: var(--brand-yellow); margin-bottom:0.5rem;">
         <span>Showing employees approaching PTO balance limits</span>
         <a href="#" onclick="clearPtoConcernsFilter(); return false;" style="margin-left:1rem; font-weight:600;">✕ Clear filter</a>
       </div>
@@ -188,7 +188,7 @@
         </div>
 
         <div id="previewSection" style="display:none; margin-top:1.5rem;">
-          <h3 style="margin-bottom:0.75rem; color: var(--cfa-navy);">Import Preview</h3>
+          <h3 style="margin-bottom:0.75rem; color: var(--brand-navy);">Import Preview</h3>
           <div id="previewStats" class="stats-grid"></div>
           <div class="table-container" style="max-height:400px; overflow-y:auto;">
             <table>
@@ -290,12 +290,12 @@
 
         <!-- Preview Section -->
         <div id="tardinessPreview" style="display:none; margin-top:1.5rem;">
-          <h3 style="margin-bottom:0.75rem; color: var(--cfa-navy);">Analysis Preview</h3>
+          <h3 style="margin-bottom:0.75rem; color: var(--brand-navy);">Analysis Preview</h3>
           <div id="tardinessPreviewStats" class="stats-grid"></div>
 
           <div id="tardinessInfractionsList" style="margin-top:1rem;">
             <div class="section-header">
-              <span class="indicator" style="background:var(--cfa-red);"></span>
+              <span class="indicator" style="background:var(--brand-red);"></span>
               <h4>Infractions (≥10 min late)</h4>
               <span class="section-count" id="infractionCount">0</span>
             </div>
@@ -309,7 +309,7 @@
 
           <div id="tardinessFlagsList" style="margin-top:1rem;">
             <div class="section-header">
-              <span class="indicator" style="background:var(--cfa-yellow);"></span>
+              <span class="indicator" style="background:var(--brand-yellow);"></span>
               <h4>Flags (5–10 min late)</h4>
               <span class="section-count" id="flagCountBadge">0</span>
             </div>
@@ -323,7 +323,7 @@
 
           <div id="tardinessAbsencesList" style="margin-top:1rem;">
             <div class="section-header">
-              <span class="indicator" style="background:var(--cfa-navy);"></span>
+              <span class="indicator" style="background:var(--brand-navy);"></span>
               <h4>Absences (No Clock-In)</h4>
               <span class="section-count" id="absenceCount">0</span>
             </div>
@@ -382,12 +382,12 @@
 
         <!-- Preview Section -->
         <div id="mealPenaltyPreview" style="display:none; margin-top:1.5rem;">
-          <h3 style="margin-bottom:0.75rem; color: var(--cfa-navy);">Analysis Preview</h3>
+          <h3 style="margin-bottom:0.75rem; color: var(--brand-navy);">Analysis Preview</h3>
           <div id="mealPenaltyPreviewStats" class="stats-grid"></div>
 
           <div style="margin-top:1rem;">
             <div class="section-header">
-              <span class="indicator" style="background:var(--cfa-red);"></span>
+              <span class="indicator" style="background:var(--brand-red);"></span>
               <h4>Meal Penalty Violations</h4>
               <span class="section-count" id="mealPenaltyCount">0</span>
             </div>
@@ -486,7 +486,7 @@
         </div>
       </div>
       <div id="detailStats" class="detail-stats"></div>
-      <h3 style="margin-bottom:0.75rem; color: var(--cfa-navy);">Monthly Breakdown</h3>
+      <h3 style="margin-bottom:0.75rem; color: var(--brand-navy);">Monthly Breakdown</h3>
       <div class="table-container" style="max-height:400px; overflow-y:auto;">
         <table>
           <thead>
@@ -502,7 +502,7 @@
           <tbody id="detailBody"></tbody>
         </table>
       </div>
-      <h3 style="margin: 1rem 0 0.75rem; color: var(--cfa-navy);">Time-Off History</h3>
+      <h3 style="margin: 1rem 0 0.75rem; color: var(--brand-navy);">Time-Off History</h3>
       <div class="table-container" style="max-height:200px; overflow-y:auto;">
         <table>
           <thead><tr><th>Date</th><th>Type</th><th class="text-right">Days</th><th>Notes</th><th></th></tr></thead>

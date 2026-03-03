@@ -3,17 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CFA La Rambla - My Time Off</title>
+  <title>La Rambla — Employee Portal</title>
   <link rel="stylesheet" href="/css/style.css">
-  <link rel="icon" href="/img/cfa-favicon.ico" type="image/x-icon">
+  <link rel="icon" href="/img/favicon.ico" type="image/x-icon">
   <meta name="theme-color" content="#004F71">
 </head>
 <body>
   <header class="app-header">
     <div class="header-brand">
-      <img src="/img/cfa-logo.gif" alt="Chick-fil-A" onerror="this.style.display='none'">
+      <img src="/img/logo.png" alt="La Rambla" onerror="this.style.display='none'">
       <div class="header-divider"></div>
-      <h1>My Time Off</h1>
+      <h1>Employee Portal</h1>
     </div>
     <button class="hamburger-btn" onclick="toggleMobileMenu()" aria-label="Menu">&#9776;</button>
     <div class="header-actions">
@@ -234,11 +234,11 @@
         <div class="stat-card"><div class="label">Vacation Earned</div><div class="value">${totalVac.toFixed(2)}</div></div>
         <div class="stat-card"><div class="label">Vacation Used</div><div class="value">${vacTaken.toFixed(2)}</div></div>
         <div class="stat-card"><div class="label">Vacation Pending</div><div class="value">${vacPending.toFixed(2)}</div></div>
-        <div class="stat-card"><div class="label">Vacation Available</div><div class="value" style="color: var(--cfa-red);">${vacAvailable.toFixed(2)}</div></div>
+        <div class="stat-card"><div class="label">Vacation Available</div><div class="value" style="color: var(--brand-red);">${vacAvailable.toFixed(2)}</div></div>
         ${isExempt ? `<div class="stat-card"><div class="label">Sick Earned</div><div class="value">${totalSick.toFixed(2)}<small style="font-size:0.6em; color:var(--text-light);"> / ${SICK_CAP}</small></div></div>` : ''}
         <div class="stat-card"><div class="label">Sick Used</div><div class="value">${sickTaken.toFixed(2)}</div></div>
         ${isExempt ? `<div class="stat-card"><div class="label">Sick Pending</div><div class="value">${sickPending.toFixed(2)}</div></div>` : ''}
-        ${isExempt ? `<div class="stat-card"><div class="label">Sick Available</div><div class="value" style="color: var(--cfa-red);">${sickAvailable.toFixed(2)}</div></div>` : ''}
+        ${isExempt ? `<div class="stat-card"><div class="label">Sick Available</div><div class="value" style="color: var(--brand-red);">${sickAvailable.toFixed(2)}</div></div>` : ''}
       `;
 
       // Update request form balance display

@@ -1,5 +1,5 @@
 /**
- * Migrate data from the existing Vacation Workbook.xlsx into the PTO Tracker database.
+ * Migrate data from the existing Vacation Workbook.xlsx into the Restaurant Admin Hub database.
  *
  * This script:
  * 1. Reads the Export_Wage sheet (raw punch data) to populate employees + monthly_hours
@@ -20,7 +20,7 @@ const fs = require('fs');
 const WORKBOOK_PATH = path.join(__dirname, '..', '..', 'Vacation Workbook.xlsx');
 
 async function migrate() {
-  console.log('=== PTO Tracker Data Migration ===\n');
+  console.log('=== Restaurant Admin Hub Data Migration ===\n');
 
   if (!fs.existsSync(WORKBOOK_PATH)) {
     console.error(`Workbook not found at: ${WORKBOOK_PATH}`);

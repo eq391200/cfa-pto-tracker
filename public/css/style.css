@@ -1,47 +1,46 @@
 /* =============================================
-   CFA PTO Tracker — Chick-fil-A Brand Theme
-   Redesigned with Apple-level polish
+   Restaurant Admin Hub — Brand Theme
    ============================================= */
 
 /* ── Reset & Foundation ─────────────────────── */
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 :root {
-  /* CFA Primary Palette */
-  --cfa-red: #E51636;
-  --cfa-dark-red: #C2102D;
-  --cfa-white: #FFFFFF;
+  /* Primary Palette */
+  --brand-red: #E51636;
+  --brand-dark-red: #C2102D;
+  --brand-white: #FFFFFF;
 
-  /* CFA Secondary Palette */
-  --cfa-navy: #004F71;
-  --cfa-navy-deep: #003A54;
-  --cfa-dark-gray: #5B6770;
-  --cfa-gray: #DAD7D2;
-  --cfa-light-gray: #F2F1EF;
+  /* Secondary Palette */
+  --brand-navy: #004F71;
+  --brand-navy-deep: #003A54;
+  --brand-dark-gray: #5B6770;
+  --brand-gray: #DAD7D2;
+  --brand-light-gray: #F2F1EF;
 
-  /* CFA Tertiary Accents */
-  --cfa-green: #249E6B;
-  --cfa-green-light: #E8F8F0;
-  --cfa-yellow: #F5A623;
-  --cfa-yellow-light: #FFF8EB;
-  --cfa-blue: #3EB1C8;
-  --cfa-blue-light: #EBF8FA;
-  --cfa-cream: #FCF7E7;
+  /* Tertiary Accents */
+  --brand-green: #249E6B;
+  --brand-green-light: #E8F8F0;
+  --brand-yellow: #F5A623;
+  --brand-yellow-light: #FFF8EB;
+  --brand-blue: #3EB1C8;
+  --brand-blue-light: #EBF8FA;
+  --brand-cream: #FCF7E7;
 
   /* Functional Tokens */
-  --primary: var(--cfa-red);
-  --primary-hover: var(--cfa-dark-red);
+  --primary: var(--brand-red);
+  --primary-hover: var(--brand-dark-red);
   --danger: #DC2626;
   --danger-light: #FEF2F2;
-  --success: var(--cfa-green);
-  --success-light: var(--cfa-green-light);
-  --warning: var(--cfa-yellow);
-  --warning-light: var(--cfa-yellow-light);
+  --success: var(--brand-green);
+  --success-light: var(--brand-green-light);
+  --warning: var(--brand-yellow);
+  --warning-light: var(--brand-yellow-light);
   --bg: #F7F6F3;
-  --card: var(--cfa-white);
+  --card: var(--brand-white);
   --text: #1A1A1A;
   --text-secondary: #6B7280;
-  --text-light: var(--cfa-dark-gray);
+  --text-light: var(--brand-dark-gray);
   --border: #E5E4E1;
   --border-light: #F0EFEC;
 
@@ -114,7 +113,7 @@ body {
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(90deg, var(--cfa-red), var(--cfa-dark-red));
+  background: linear-gradient(90deg, var(--brand-red), var(--brand-dark-red));
 }
 
 .login-logo {
@@ -148,7 +147,7 @@ body {
    App Header — Deep Gradient
    =========================== */
 .app-header {
-  background: linear-gradient(135deg, var(--cfa-navy) 0%, var(--cfa-navy-deep) 60%, #002438 100%);
+  background: linear-gradient(135deg, var(--brand-navy) 0%, var(--brand-navy-deep) 60%, #002438 100%);
   padding: 0 2rem;
   height: 64px;
   display: flex;
@@ -157,7 +156,7 @@ body {
   position: sticky;
   top: 0;
   z-index: 100;
-  box-shadow: 0 2px 0 var(--cfa-red), 0 4px 20px rgba(0,79,113,0.2);
+  box-shadow: 0 2px 0 var(--brand-red), 0 4px 20px rgba(0,79,113,0.2);
 }
 
 .header-brand {
@@ -173,7 +172,7 @@ body {
 
 .app-header h1 {
   font-size: 1.0625rem;
-  color: var(--cfa-white);
+  color: var(--brand-white);
   font-weight: 600;
   letter-spacing: 0.01em;
 }
@@ -250,7 +249,7 @@ body {
   top: 0;
   bottom: 0;
   width: 4px;
-  background: var(--cfa-navy);
+  background: var(--brand-navy);
   transition: all var(--duration-normal) var(--ease-out);
 }
 
@@ -262,7 +261,7 @@ body {
 
 .stat-card:hover::before {
   width: 5px;
-  background: var(--cfa-red);
+  background: var(--brand-red);
 }
 
 .stat-card .label {
@@ -308,7 +307,7 @@ body {
 .alert-banner .alert-icon { font-size: 1.125rem; flex-shrink: 0; }
 .alert-banner .alert-actions { margin-left: auto; }
 .alert-banner a {
-  color: var(--cfa-red);
+  color: var(--brand-red);
   font-weight: 600;
   text-decoration: none;
   transition: opacity var(--duration-fast);
@@ -367,8 +366,8 @@ body {
 }
 
 .tab.active {
-  color: var(--cfa-white);
-  background: var(--cfa-navy);
+  color: var(--brand-white);
+  background: var(--brand-navy);
   font-weight: 600;
   box-shadow: 0 1px 3px rgba(0, 79, 113, 0.3);
 }
@@ -392,7 +391,7 @@ body {
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(90deg, var(--cfa-navy), var(--cfa-blue));
+  background: linear-gradient(90deg, var(--brand-navy), var(--brand-blue));
   border-radius: var(--radius-md) var(--radius-md) 0 0;
   z-index: 1;
 }
@@ -423,7 +422,7 @@ th {
   background: linear-gradient(180deg, var(--bg) 0%, #EEEDEA 100%);
   font-weight: 700;
   white-space: normal;
-  color: var(--cfa-navy);
+  color: var(--brand-navy);
   font-size: 0.6875rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -449,8 +448,8 @@ th.sortable {
   transition: all var(--duration-fast);
 }
 th.sortable:hover {
-  color: var(--cfa-red);
-  background: var(--cfa-light-gray);
+  color: var(--brand-red);
+  background: var(--brand-light-gray);
 }
 
 .text-right { text-align: right; }
@@ -473,20 +472,20 @@ th.sortable:hover {
 
 .badge-active { background: var(--success-light); color: #15803D; }
 .badge-inactive { background: var(--danger-light); color: #B91C1C; }
-.badge-hourly { background: var(--cfa-blue-light); color: #0E7490; }
+.badge-hourly { background: var(--brand-blue-light); color: #0E7490; }
 .badge-exempt { background: #F5F3FF; color: #7C3AED; }
 .badge-pending { background: var(--warning-light); color: #B45309; }
 .badge-approved { background: var(--success-light); color: #15803D; }
 .badge-rejected { background: var(--danger-light); color: #B91C1C; }
 .badge-cancelled { background: #F3F4F6; color: #6B7280; }
-.badge-punch { background: var(--cfa-blue-light); color: #0E7490; }
+.badge-punch { background: var(--brand-blue-light); color: #0E7490; }
 
 /* Tab notification badge */
 .tab-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: var(--cfa-red);
+  background: var(--brand-red);
   color: white;
   border-radius: var(--radius-full);
   font-size: 0.625rem;
@@ -518,7 +517,7 @@ th.sortable:hover {
   position: absolute;
   top: -4px;
   right: -4px;
-  background: var(--cfa-red);
+  background: var(--brand-red);
   color: white;
   border-radius: var(--radius-full);
   font-size: 0.5625rem;
@@ -529,7 +528,7 @@ th.sortable:hover {
   align-items: center;
   justify-content: center;
   padding: 0 0.25rem;
-  box-shadow: 0 0 0 2px var(--cfa-navy);
+  box-shadow: 0 0 0 2px var(--brand-navy);
 }
 .notif-count.hidden { display: none; }
 
@@ -605,7 +604,7 @@ th.sortable:hover {
 }
 .dropdown-item:hover {
   background: var(--bg);
-  color: var(--cfa-red);
+  color: var(--brand-red);
 }
 
 @media (max-width: 768px) {
@@ -637,7 +636,7 @@ th.sortable:hover {
 
 .btn:hover {
   background: var(--bg);
-  border-color: var(--cfa-gray);
+  border-color: var(--brand-gray);
   box-shadow: var(--shadow-xs);
 }
 
@@ -646,9 +645,9 @@ th.sortable:hover {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--cfa-red) 0%, var(--cfa-dark-red) 100%);
+  background: linear-gradient(135deg, var(--brand-red) 0%, var(--brand-dark-red) 100%);
   color: white;
-  border-color: var(--cfa-dark-red);
+  border-color: var(--brand-dark-red);
   box-shadow: 0 2px 4px rgba(229, 22, 54, 0.25), inset 0 1px 0 rgba(255,255,255,0.1);
   font-weight: 600;
 }
@@ -728,7 +727,7 @@ select, textarea {
 
 input:focus, select:focus, textarea:focus {
   outline: none;
-  border-color: var(--cfa-navy);
+  border-color: var(--brand-navy);
   box-shadow: 0 0 0 3px rgba(0, 79, 113, 0.1);
 }
 
@@ -776,7 +775,7 @@ select {
   overflow-y: auto;
   box-shadow: var(--shadow-xl), 0 0 0 1px rgba(0,0,0,0.04);
   animation: modalSlideUp var(--duration-slow) var(--ease-spring);
-  border-top: 3px solid var(--cfa-red);
+  border-top: 3px solid var(--brand-red);
 }
 
 @keyframes modalSlideUp {
@@ -805,7 +804,7 @@ select {
    Upload Area
    =========================== */
 .upload-area {
-  border: 2px dashed var(--cfa-gray);
+  border: 2px dashed var(--brand-gray);
   border-radius: var(--radius-lg);
   padding: 3rem 2rem;
   text-align: center;
@@ -816,14 +815,14 @@ select {
 }
 
 .upload-area:hover {
-  border-color: var(--cfa-navy);
+  border-color: var(--brand-navy);
   background: linear-gradient(135deg, rgba(0, 79, 113, 0.03) 0%, rgba(0, 79, 113, 0.06) 100%);
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
 }
 
 .upload-area.dragover {
-  border-color: var(--cfa-red);
+  border-color: var(--brand-red);
   border-style: solid;
   background: linear-gradient(135deg, rgba(229, 22, 54, 0.03) 0%, rgba(229, 22, 54, 0.06) 100%);
   box-shadow: 0 0 0 4px rgba(229, 22, 54, 0.1), var(--shadow-md);
@@ -862,7 +861,7 @@ select {
   left: 0;
   right: 0;
   height: 4px;
-  background: linear-gradient(90deg, var(--cfa-red) 0%, var(--cfa-navy) 100%);
+  background: linear-gradient(90deg, var(--brand-red) 0%, var(--brand-navy) 100%);
 }
 
 .detail-panel h2 {
@@ -902,11 +901,11 @@ select {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--cfa-gray);
+  background: var(--brand-gray);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--cfa-dark-gray);
+  background: var(--brand-dark-gray);
 }
 
 /* ===========================
@@ -1028,7 +1027,7 @@ select {
     position: absolute;
     top: 56px;
     right: 0;
-    background: var(--cfa-navy-deep);
+    background: var(--brand-navy-deep);
     padding: 1rem;
     width: 240px;
     box-shadow: var(--shadow-lg);
@@ -1159,7 +1158,7 @@ select {
 }
 
 :focus-visible {
-  outline: 2px solid var(--cfa-navy);
+  outline: 2px solid var(--brand-navy);
   outline-offset: 2px;
 }
 
@@ -1206,12 +1205,12 @@ select {
 /* ===========================
    Stat Card Variants
    =========================== */
-.stat-card--infraction::before { background: var(--cfa-red) !important; opacity: 1 !important; }
-.stat-card--flag::before { background: var(--cfa-yellow) !important; opacity: 1 !important; }
+.stat-card--infraction::before { background: var(--brand-red) !important; opacity: 1 !important; }
+.stat-card--flag::before { background: var(--brand-yellow) !important; opacity: 1 !important; }
 .stat-card--ok::before { background: var(--success) !important; opacity: 1 !important; }
-.stat-card--info::before { background: var(--cfa-navy) !important; opacity: 1 !important; }
+.stat-card--info::before { background: var(--brand-navy) !important; opacity: 1 !important; }
 
-.stat-card--infraction .value { color: var(--cfa-red); }
+.stat-card--infraction .value { color: var(--brand-red); }
 .stat-card--flag .value { color: #D97706; }
 .stat-card--ok .value { color: var(--success); }
 
@@ -1221,7 +1220,7 @@ select {
 .upload-icon {
   width: 56px;
   height: 56px;
-  color: var(--cfa-navy);
+  color: var(--brand-navy);
   opacity: 0.3;
   margin-bottom: 1rem;
   transition: all var(--duration-slow) var(--ease-spring);
@@ -1231,13 +1230,13 @@ select {
 .upload-area:hover .upload-icon {
   opacity: 0.8;
   transform: translateY(-6px);
-  color: var(--cfa-red);
+  color: var(--brand-red);
   filter: drop-shadow(0 4px 8px rgba(229, 22, 54, 0.2));
 }
 
 .upload-area.dragover .upload-icon {
   opacity: 1;
-  color: var(--cfa-red);
+  color: var(--brand-red);
   transform: translateY(-8px) scale(1.1);
   filter: drop-shadow(0 6px 12px rgba(229, 22, 54, 0.3));
 }
@@ -1245,7 +1244,7 @@ select {
 .upload-label {
   font-size: 1.0625rem;
   margin-bottom: 0.375rem;
-  color: var(--cfa-navy);
+  color: var(--brand-navy);
   font-weight: 500;
 }
 
@@ -1308,15 +1307,15 @@ select {
    Notify Button (CFA Red)
    =========================== */
 .btn-notify {
-  background: var(--cfa-red);
+  background: var(--brand-red);
   color: white;
-  border-color: var(--cfa-red);
+  border-color: var(--brand-red);
   box-shadow: 0 1px 2px rgba(229, 22, 54, 0.2);
 }
 
 .btn-notify:hover {
-  background: var(--cfa-dark-red);
-  border-color: var(--cfa-dark-red);
+  background: var(--brand-dark-red);
+  border-color: var(--brand-dark-red);
   box-shadow: 0 2px 8px rgba(229, 22, 54, 0.3);
   color: white;
   transform: translateY(-1px);
@@ -1407,7 +1406,7 @@ select {
    Section Title with Icon
    =========================== */
 .section-title {
-  color: var(--cfa-navy);
+  color: var(--brand-navy);
   font-size: 1.0625rem;
   font-weight: 700;
   margin-bottom: 0.75rem;

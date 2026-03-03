@@ -1,7 +1,7 @@
 {
-  "name": "cfa-pto-tracker",
+  "name": "restaurant-admin-hub",
   "version": "1.0.0",
-  "description": "PTO accrual tracker for vacation and sick day management",
+  "description": "All-in-one restaurant admin platform — time-off, tardiness, meal penalties, and more",
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",

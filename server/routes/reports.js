@@ -92,7 +92,7 @@ router.get('/export/pdf', (req, res) => {
     doc.pipe(res);
 
     // Header
-    doc.fontSize(18).fillColor(COLORS.navy).text('CFA La Rambla — PTO Report', { align: 'center' });
+    doc.fontSize(18).fillColor(COLORS.navy).text('La Rambla — PTO Report', { align: 'center' });
     doc.fontSize(9).fillColor(COLORS.gray).text(`Generated: ${new Date().toLocaleDateString()} | Filter: ${status || 'All'}`, { align: 'center' });
     doc.moveDown(0.5);
 
@@ -198,7 +198,7 @@ router.get('/export/statement/:employeeId', (req, res) => {
 
     // Header
     doc.fontSize(18).fillColor(COLORS.navy).text('PTO Statement', { align: 'center' });
-    doc.fontSize(10).fillColor(COLORS.gray).text('CFA La Rambla', { align: 'center' });
+    doc.fontSize(10).fillColor(COLORS.gray).text('La Rambla', { align: 'center' });
     doc.moveDown();
 
     // Employee info
@@ -317,7 +317,7 @@ router.get('/export/year-end', (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename="pto-year-end-${year}.pdf"`);
     doc.pipe(res);
 
-    doc.fontSize(18).fillColor(COLORS.navy).text(`CFA La Rambla — Year-End PTO Summary ${year}`, { align: 'center' });
+    doc.fontSize(18).fillColor(COLORS.navy).text(`La Rambla — Year-End PTO Summary ${year}`, { align: 'center' });
     doc.fontSize(9).fillColor(COLORS.gray).text(`Generated: ${new Date().toLocaleDateString()}`, { align: 'center' });
     doc.moveDown();
 

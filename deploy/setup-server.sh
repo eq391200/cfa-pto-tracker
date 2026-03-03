@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================
-# PTO Tracker - Server Setup Script
+# Restaurant Admin Hub - Server Setup Script
 # Run this on a fresh Ubuntu 22.04/24.04 VPS
 # ============================================
 set -e
@@ -9,7 +9,7 @@ DOMAIN="cfalarambla.com"
 APP_DIR="/opt/pto-tracker"
 
 echo "========================================="
-echo "PTO Tracker - Server Setup"
+echo "Restaurant Admin Hub - Server Setup"
 echo "========================================="
 
 # 1. System updates

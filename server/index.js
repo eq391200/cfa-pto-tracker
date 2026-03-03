@@ -1,5 +1,5 @@
 /**
- * CFA La Rambla — PTO Tracker
+ * La Rambla — Restaurant Admin Hub
  * Express application entry point.
  *
  * Stack: Express + better-sqlite3 + express-session (SQLite store)
@@ -112,5 +112,5 @@ app.use((err, _req, res, _next) => {
 
 // ── Start Server ────────────────────────────────────────────────────
 app.listen(PORT, () => {
-  console.log(`PTO Tracker running at http://localhost:${PORT}`);
+  console.log(`Restaurant Admin Hub running at http://localhost:${PORT}`);
 });
