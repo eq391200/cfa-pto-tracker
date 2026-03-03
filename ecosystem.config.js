@@ -4,7 +4,8 @@ module.exports = {
     script: 'server/index.js',
     env: {
       NODE_ENV: 'production',
-      PORT: 3000
+      PORT: 3000,
+      PYTHON_PATH: '/opt/pto-tracker/scripts/.venv/bin/python3'
     },
     instances: 1,
     autorestart: true,

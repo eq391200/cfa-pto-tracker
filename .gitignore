@@ -8,3 +8,6 @@ data/backups/
 .DS_Store
 data/pto.db-shm
 data/pto.db-wal
+data/reconciliation-reports/
+scripts/.venv/
+scripts/__pycache__/

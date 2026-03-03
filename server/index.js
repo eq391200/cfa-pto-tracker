@@ -89,6 +89,7 @@ app.use('/api/reports',       requireAuth, requireAdmin, require('./routes/repor
 app.use('/api/notifications', requireAuth, requireAdmin, require('./routes/notifications'));
 app.use('/api/tardiness',     requireAuth, requireAdmin, require('./routes/tardiness'));
 app.use('/api/meal-penalty',  requireAuth, requireAdmin, require('./routes/mealPenalty'));
+app.use('/api/reconciliation', requireAuth, requireAdmin, require('./routes/reconciliation'));
 
 // ── Protected Static Files ──────────────────────────────────────────
 // Everything not matched above requires authentication.

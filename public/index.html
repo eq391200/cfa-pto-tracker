@@ -41,6 +41,7 @@
       <button class="tab" data-tab="timeoff" onclick="switchTab('timeoff')">Record Time-Off</button>
       <button class="tab" data-tab="tardiness" onclick="switchTab('tardiness')">Tardiness</button>
       <button class="tab" data-tab="mealpenalty" onclick="switchTab('mealpenalty')">Meal Penalties</button>
+      <button class="tab" data-tab="reconciliation" onclick="switchTab('reconciliation')">Reconciliation</button>
       <button class="tab" data-tab="accounts" onclick="switchTab('accounts')">User Accounts</button>
     </div>
 
@@ -425,6 +426,117 @@
               </tr>
             </thead>
             <tbody id="mealPenaltyHistoryBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reconciliation Tab -->
+    <div id="tab-reconciliation" style="display:none;">
+      <div class="detail-panel">
+        <h2>Monthly Reconciliation</h2>
+        <p style="color:var(--text-light); margin-bottom:1rem;">
+          Upload the 6 required financial files for a given month to run the
+          automated reconciliation. The system matches expenses against bank
+          and credit card statements and generates an interactive HTML report.
+        </p>
+
+        <!-- Month/Year Picker -->
+        <div style="display:flex; gap:1rem; margin-bottom:1.5rem; flex-wrap:wrap;">
+          <div class="form-group" style="margin-bottom:0; flex:1; min-width:140px;">
+            <label for="reconMonth">Month</label>
+            <select id="reconMonth">
+              <option value="1">January</option>
+              <option value="2">February</option>
+              <option value="3">March</option>
+              <option value="4">April</option>
+              <option value="5">May</option>
+              <option value="6">June</option>
+              <option value="7">July</option>
+              <option value="8">August</option>
+              <option value="9">September</option>
+              <option value="10">October</option>
+              <option value="11">November</option>
+              <option value="12">December</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:0; flex:1; min-width:120px;">
+            <label for="reconYear">Year</label>
+            <select id="reconYear"></select>
+          </div>
+        </div>
+
+        <!-- 6 File Inputs -->
+        <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:1rem; margin-bottom:1.5rem;">
+          <div class="recon-file-input">
+            <label for="reconGastos">1. GASTOS Expense Export</label>
+            <p class="upload-sublabel">R365 payment detail export (CSV)</p>
+            <input type="file" id="reconGastos" accept=".csv">
+          </div>
+          <div class="recon-file-input">
+            <label for="reconChase">2. Chase CC Statement</label>
+            <p class="upload-sublabel">Chase Ink credit card activity (CSV)</p>
+            <input type="file" id="reconChase" accept=".csv,.CSV">
+          </div>
+          <div class="recon-file-input">
+            <label for="reconAmexPlat">3. AMEX Platinum Statement</label>
+            <p class="upload-sublabel">American Express Platinum activity (XLSX)</p>
+            <input type="file" id="reconAmexPlat" accept=".xlsx,.xls">
+          </div>
+          <div class="recon-file-input">
+            <label for="reconAmexDelta">4. AMEX Delta Statement</label>
+            <p class="upload-sublabel">American Express Delta activity (XLSX)</p>
+            <input type="file" id="reconAmexDelta" accept=".xlsx,.xls">
+          </div>
+          <div class="recon-file-input">
+            <label for="reconBancoCurrent">5. Banco Popular — Current Month</label>
+            <p class="upload-sublabel">Bank statement export, current month (CSV)</p>
+            <input type="file" id="reconBancoCurrent" accept=".csv,.CSV">
+          </div>
+          <div class="recon-file-input">
+            <label for="reconBancoPrior">6. Banco Popular — Prior Month</label>
+            <p class="upload-sublabel">Bank statement export, prior month (CSV)</p>
+            <input type="file" id="reconBancoPrior" accept=".csv,.CSV">
+          </div>
+        </div>
+
+        <!-- Run Button -->
+        <button class="btn btn-primary" id="reconRunBtn" onclick="runReconciliation(this)">
+          Run Reconciliation
+        </button>
+
+        <!-- Loading State -->
+        <div id="reconLoading" style="display:none; margin-top:1.5rem;">
+          <div style="display:flex; align-items:center; gap:0.75rem; padding:1.25rem; background:var(--brand-blue-light); border-radius:var(--radius-md);">
+            <div class="spinner"></div>
+            <div>
+              <strong>Running reconciliation...</strong>
+              <p style="color:var(--text-light); font-size:0.8125rem; margin-top:0.25rem;">
+                This may take 1–2 minutes. Processing 6 files with fuzzy matching.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Result Section -->
+        <div id="reconResult" style="display:none; margin-top:1.5rem;" class="detail-panel"></div>
+      </div>
+
+      <!-- History -->
+      <div style="margin-top:2rem;">
+        <h3 class="section-title"><span class="section-title-icon">&#128203;</span> Previous Reports</h3>
+        <div class="table-container">
+          <table class="responsive-table">
+            <thead>
+              <tr>
+                <th>Period</th>
+                <th>File Size</th>
+                <th>Generated</th>
+                <th>By</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="reconHistoryBody"></tbody>
           </table>
         </div>
       </div>

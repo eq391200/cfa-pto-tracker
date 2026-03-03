@@ -55,6 +55,7 @@ function switchTab(tab) {
   if (tab === 'timeoff') loadTimeOffForm();
   if (tab === 'tardiness') loadTardinessHistory();
   if (tab === 'mealpenalty') loadMealPenaltyHistory();
+  if (tab === 'reconciliation') loadReconHistory();
   if (tab === 'accounts') loadAccounts();
 }
 
@@ -1528,6 +1529,133 @@ async function deleteMealPenaltyReport(id) {
     } else {
       alert('Error: ' + (data.error || 'Unknown error'));
     }
+  } catch (err) {
+    alert('Delete failed: ' + err.message);
+  }
+}
+
+// ── Reconciliation ─────────────────────────────────────────────────
+
+// Populate year dropdown on load
+(function initReconYearDropdown() {
+  const sel = document.getElementById('reconYear');
+  if (!sel) return;
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  for (let y = currentYear; y >= currentYear - 3; y--) {
+    const opt = document.createElement('option');
+    opt.value = y;
+    opt.textContent = y;
+    sel.appendChild(opt);
+  }
+  const monthSel = document.getElementById('reconMonth');
+  if (monthSel) monthSel.value = now.getMonth() + 1;
+})();
+
+async function runReconciliation(btn) {
+  const month = document.getElementById('reconMonth').value;
+  const year = document.getElementById('reconYear').value;
+
+  const fileInputs = {
+    gastos: document.getElementById('reconGastos'),
+    chase: document.getElementById('reconChase'),
+    amexPlatinum: document.getElementById('reconAmexPlat'),
+    amexDelta: document.getElementById('reconAmexDelta'),
+    bancoCurrent: document.getElementById('reconBancoCurrent'),
+    bancoPrior: document.getElementById('reconBancoPrior'),
+  };
+
+  const missing = [];
+  for (const [name, input] of Object.entries(fileInputs)) {
+    if (!input.files[0]) missing.push(name);
+  }
+  if (missing.length > 0) {
+    alert('Please select all 6 files before running. Missing: ' + missing.join(', '));
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append('month', month);
+  formData.append('year', year);
+  for (const [name, input] of Object.entries(fileInputs)) {
+    formData.append(name, input.files[0]);
+  }
+
+  btn.disabled = true;
+  document.getElementById('reconLoading').style.display = '';
+  document.getElementById('reconResult').style.display = 'none';
+
+  try {
+    const data = await fetchJSON('/api/reconciliation/run', {
+      method: 'POST',
+      body: formData,
+    });
+
+    document.getElementById('reconLoading').style.display = 'none';
+    const resultEl = document.getElementById('reconResult');
+    resultEl.style.display = '';
+
+    if (data.success) {
+      const r = data.report;
+      const sizeKB = Math.round(r.fileSize / 1024);
+      resultEl.innerHTML = `
+        <h3 style="color:var(--success); margin-bottom:0.75rem;">Reconciliation Complete</h3>
+        <p style="margin-bottom:1rem;">Period: <strong>${esc(r.periodLabel)}</strong> &mdash; Report size: ${sizeKB} KB</p>
+        <a class="btn btn-primary" href="/api/reconciliation/report/${encodeURIComponent(r.id)}/view" target="_blank">
+          Open Report
+        </a>
+      `;
+      for (const input of Object.values(fileInputs)) input.value = '';
+      loadReconHistory();
+    } else {
+      resultEl.innerHTML = `<h3 style="color:var(--danger);">Reconciliation Failed</h3><p>${esc(data.error)}</p>`;
+    }
+  } catch (err) {
+    document.getElementById('reconLoading').style.display = 'none';
+    const resultEl = document.getElementById('reconResult');
+    resultEl.style.display = '';
+    resultEl.innerHTML = `<h3 style="color:var(--danger);">Reconciliation Failed</h3><p>${esc(err.message)}</p>`;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function loadReconHistory() {
+  try {
+    const reports = await fetchJSON('/api/reconciliation/reports');
+    const monthNames = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    document.getElementById('reconHistoryBody').innerHTML = reports.length
+      ? reports.map(r => {
+        const sizeKB = Math.round(r.file_size / 1024);
+        const label = `${monthNames[r.month]} ${r.year}`;
+        return `
+        <tr>
+          <td data-label="Period">${esc(label)}</td>
+          <td data-label="File Size">${sizeKB} KB</td>
+          <td data-label="Generated">${esc(new Date(r.created_at).toLocaleDateString())}</td>
+          <td data-label="By">${esc(r.uploaded_by || '-')}</td>
+          <td>
+            <div class="action-group">
+              <a class="btn btn-sm" href="/api/reconciliation/report/${encodeURIComponent(r.id)}/view" target="_blank">View</a>
+              <button class="btn btn-sm btn-danger" onclick="deleteReconReport(${r.id})">Delete</button>
+            </div>
+          </td>
+        </tr>`;
+      }).join('')
+      : '<tr><td colspan="5"><div class="empty-state"><span class="empty-state-icon">&#128203;</span><span class="empty-state-text">No reports yet</span></div></td></tr>';
+  } catch (err) {
+    console.error('Failed to load reconciliation history:', err);
+  }
+}
+
+async function deleteReconReport(id) {
+  if (!confirm('Delete this reconciliation report? This cannot be undone.')) return;
+  try {
+    const data = await fetchJSON(`/api/reconciliation/report/${id}`, { method: 'DELETE' });
+    if (data.success) loadReconHistory();
+    else alert('Error: ' + (data.error || 'Unknown error'));
   } catch (err) {
     alert('Delete failed: ' + err.message);
   }

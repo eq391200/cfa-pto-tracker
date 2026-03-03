@@ -249,6 +249,21 @@ function runMigrations(db) {
     CREATE INDEX IF NOT EXISTS idx_meal_penalty_records_employee
       ON meal_penalty_records(report_id, employee_name);
   `);
+
+  // v1.7 — Reconciliation reports (metadata only; report is an HTML file on disk)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS reconciliation_reports (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      month         INTEGER NOT NULL,
+      year          INTEGER NOT NULL,
+      period_label  TEXT NOT NULL,
+      output_file   TEXT NOT NULL,
+      file_size     INTEGER NOT NULL DEFAULT 0,
+      uploaded_by   TEXT,
+      created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(year, month)
+    );
+  `);
 }
 
 module.exports = { getDb, initDb };
