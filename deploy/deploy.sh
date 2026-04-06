@@ -25,6 +25,7 @@ rsync -avz --delete \
   --exclude 'deploy' \
   --exclude 'scripts/.venv' \
   --exclude 'scripts/__pycache__' \
+  --exclude 'public/samples' \
   "$PROJECT_DIR/" "$SERVER_USER@$SERVER_IP:$APP_DIR/"
 
 echo "Installing dependencies on server..."

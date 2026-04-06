@@ -1,17 +1,24 @@
 /**
  * Excel/CSV Parser — Parses CFA wage export files into structured data.
  *
- * Supports two formats (auto-detected from column headers):
+ * Supports three formats (auto-detected from column headers):
  *
  * Legacy format (wage export):
  *   FIRST_NAME, LAST_NAME, CAL_DAY, PUNCH_TYPE, START_TIME, END_TIME,
  *   PUNCH_LENGTH_AS_DECIMAL, ...
  *
- * New format (TP_PUNCHES):
+ * TP_PUNCHES v1:
  *   EMPLOYEE, PUNCHTYPE, TIMEIN, TIMEOUT, TIMEPAID, REMARKS, LAST_UPDATE_DATE
  *   - EMPLOYEE is "LastName, FirstName" (e.g. "Alfonzo Muniz, Kevin Javier")
  *   - Only "Regular" PUNCHTYPE rows count toward hours
  *   - Hours calculated from TIMEIN/TIMEOUT timestamps
+ *
+ * TP_PUNCHES_PLUS (v2 — current):
+ *   PERSON_ID, FULL_NAME, EMPLOYEE_NUMBER, TIME_PUNCH_ID, LOCATION_NUM,
+ *   PUNCH_TYPE, START_TIME, END_TIME, PUNCH_LENGTH, REMARKS
+ *   - FULL_NAME is "LastName, FirstName" (e.g. "Alfonzo Muniz, Kevin Javier")
+ *   - PUNCH_TYPE "R" = Regular (only counted toward hours)
+ *   - PUNCH_LENGTH is decimal hours (pre-calculated)
  *
  * Returns:
  *   - employees: Map<fullName, { firstName, lastName }>
@@ -36,14 +43,23 @@ function parseWageExport(filePath) {
   if (!peek.length) throw new Error('File is empty or has no data rows');
 
   const headers = Object.keys(peek[0]);
-  const isNewFormat = headers.includes('EMPLOYEE') && headers.includes('TIMEIN');
 
+  // TP_PUNCHES_PLUS v2 format (current): FULL_NAME, PUNCH_TYPE, START_TIME, END_TIME, PUNCH_LENGTH
+  const isPunchesPlus = headers.includes('FULL_NAME') && headers.includes('PUNCH_TYPE') && headers.includes('PUNCH_LENGTH');
+  if (isPunchesPlus) {
+    const wbRaw = XLSX.readFile(filePath, { raw: true });
+    const rows = XLSX.utils.sheet_to_json(wbRaw.Sheets[wbRaw.SheetNames[0]], { defval: '' });
+    return parsePunchesPlusFormat(rows);
+  }
+
+  // TP_PUNCHES v1 format: EMPLOYEE, PUNCHTYPE, TIMEIN, TIMEOUT
+  const isNewFormat = headers.includes('EMPLOYEE') && headers.includes('TIMEIN');
   if (isNewFormat) {
-    // Re-read with raw:true so XLSX doesn't convert timestamp strings to serials
     const wbRaw = XLSX.readFile(filePath, { raw: true });
     const rows = XLSX.utils.sheet_to_json(wbRaw.Sheets[wbRaw.SheetNames[0]], { defval: '' });
     return parseNewFormat(rows);
   }
+
   return parseLegacyFormat(peek);
 }
 
@@ -96,6 +112,75 @@ function parseNewFormat(rows) {
     const diffMs = dateOut.getTime() - dateIn.getTime();
     if (diffMs <= 0) continue;
     const hours = diffMs / (1000 * 60 * 60);
+
+    const yearMonth = `${dateIn.getFullYear()}-${String(dateIn.getMonth() + 1).padStart(2, '0')}`;
+
+    // Track employee
+    if (!employees.has(fullName)) {
+      employees.set(fullName, { firstName, lastName });
+    }
+
+    // Accumulate monthly hours
+    if (!monthlyHours.has(fullName)) {
+      monthlyHours.set(fullName, new Map());
+    }
+    const empMonths = monthlyHours.get(fullName);
+    empMonths.set(yearMonth, (empMonths.get(yearMonth) || 0) + hours);
+
+    // Track earliest date per employee
+    if (!earliestDate.has(fullName) || dateIn < earliestDate.get(fullName)) {
+      earliestDate.set(fullName, dateIn);
+    }
+  }
+
+  return { employees, monthlyHours, earliestDate, totalRows: rows.length };
+}
+
+/**
+ * Parse the TP_PUNCHES_PLUS format (current as of 2026).
+ * Columns: PERSON_ID, FULL_NAME, EMPLOYEE_NUMBER, TIME_PUNCH_ID, LOCATION_NUM,
+ *          PUNCH_TYPE, START_TIME, END_TIME, PUNCH_LENGTH, REMARKS
+ */
+function parsePunchesPlusFormat(rows) {
+  const employees = new Map();
+  const monthlyHours = new Map();
+  const earliestDate = new Map();
+
+  for (const row of rows) {
+    // Only count Regular punches (PUNCH_TYPE "R")
+    const punchType = String(row['PUNCH_TYPE'] || '').trim().toUpperCase();
+    if (punchType !== 'R') continue;
+
+    const rawName = String(row['FULL_NAME'] || '').trim();
+    if (!rawName) continue;
+
+    // Parse "LastName, FirstName MiddleName" format
+    const commaIdx = rawName.indexOf(',');
+    let firstName, lastName;
+    if (commaIdx !== -1) {
+      lastName = rawName.substring(0, commaIdx).trim()
+        .split(/\s+/)
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(' ');
+      const firstPart = rawName.substring(commaIdx + 1).trim();
+      // Use only the first word of firstName to match DB convention
+      firstName = firstPart.split(/\s+/)[0].replace(/\(.*\)/, '');
+    } else {
+      firstName = rawName;
+      lastName = '';
+    }
+    const fullName = firstName + ' ' + lastName;
+
+    // PUNCH_LENGTH is pre-calculated decimal hours — use it directly
+    const hours = parseFloat(row['PUNCH_LENGTH']) || 0;
+    if (hours <= 0) continue;
+
+    // Parse START_TIME for date/month extraction
+    const startTime = String(row['START_TIME'] || '').trim();
+    if (!startTime) continue;
+
+    const dateIn = new Date(startTime);
+    if (isNaN(dateIn.getTime())) continue;
 
     const yearMonth = `${dateIn.getFullYear()}-${String(dateIn.getMonth() + 1).padStart(2, '0')}`;
 

@@ -552,12 +552,12 @@ function buildFullReportPDF(doc, report, records) {
 
   // ── Page 1: Header ──
   doc.fontSize(22).font('Helvetica-Bold').fillColor(COLORS.dark)
-    .text('Employee Tardiness Analysis Report', { align: 'center' });
+    .text('Informe de Análisis de Tardanza', { align: 'center' });
   doc.fontSize(11).font('Helvetica').fillColor(COLORS.gray)
     .text('La Rambla FSU', { align: 'center' });
   doc.fontSize(9).fillColor(COLORS.gray)
-    .text(`Pay Period: ${formatDateMDY(report.pay_period_start)} - ${formatDateMDY(report.pay_period_end)}`, { align: 'center' });
-  doc.text(`Generated: ${formatDateTime(new Date())}`, { align: 'center' });
+    .text(`Período de Pago: ${formatDateMDY(report.pay_period_start)} - ${formatDateMDY(report.pay_period_end)}`, { align: 'center' });
+  doc.text(`Generado: ${formatDateTime(new Date())}`, { align: 'center' });
   doc.moveDown(0.8);
 
   // Blue separator line
@@ -567,24 +567,24 @@ function buildFullReportPDF(doc, report, records) {
 
   // ── Classification Rules ──
   doc.fontSize(14).font('Helvetica-Bold').fillColor(COLORS.dark)
-    .text('Classification Rules (Clock-In Variance Only)');
+    .text('Reglas de Clasificación (Variación de Entrada)');
   doc.moveDown(0.5);
 
   drawStyledTable(doc, {
     cols: [
-      { label: 'Status', width: 130, align: 'center' },
-      { label: 'Criteria', width: 245, align: 'center' },
-      { label: 'Action Required', width: 157, align: 'center' },
+      { label: 'Estado', width: 130, align: 'center' },
+      { label: 'Criterio', width: 245, align: 'center' },
+      { label: 'Acción Requerida', width: 157, align: 'center' },
     ],
     rows: [
-      [{ text: 'INFRACTION', bg: COLORS.red, color: COLORS.white, bold: true, align: 'center' },
-       'Clocked in >= 10 minutes late', 'Infraction notice issued'],
-      [{ text: 'FLAG', bg: COLORS.orange, color: COLORS.white, bold: true, align: 'center' },
-       'Clocked in > 5 min and < 10 min late', 'Warning -- monitor employee'],
-      [{ text: 'ABSENCE', bg: COLORS.green, color: COLORS.white, bold: true, align: 'center' },
-       'No actual clock-in recorded (scheduled only)', 'Verify with employee'],
+      [{ text: 'INFRACCIÓN', bg: COLORS.red, color: COLORS.white, bold: true, align: 'center' },
+       'Entrada >= 10 minutos tarde', 'Aviso de infracción emitido'],
+      [{ text: 'ALERTA', bg: COLORS.orange, color: COLORS.white, bold: true, align: 'center' },
+       'Entrada > 5 min y < 10 min tarde', 'Advertencia -- monitorear empleado'],
+      [{ text: 'AUSENCIA', bg: COLORS.green, color: COLORS.white, bold: true, align: 'center' },
+       'Sin registro de entrada (solo programado)', 'Verificar con el empleado'],
       [{ text: 'OK', bg: COLORS.blue, color: COLORS.white, bold: true, align: 'center' },
-       'Clocked in <= 5 minutes late or early', 'No action needed'],
+       'Entrada <= 5 minutos tarde o temprano', 'Sin acción requerida'],
     ],
     headerBg: COLORS.darkHeader,
     rowH: 28,
@@ -594,22 +594,22 @@ function buildFullReportPDF(doc, report, records) {
 
   // ── Executive Summary ──
   doc.fontSize(14).font('Helvetica-Bold').fillColor(COLORS.dark)
-    .text('Executive Summary');
+    .text('Resumen Ejecutivo');
   doc.moveDown(0.5);
 
   drawStyledTable(doc, {
     cols: [
-      { label: 'Metric', width: 380 },
-      { label: 'Count', width: 152, align: 'center' },
+      { label: 'Métrica', width: 380 },
+      { label: 'Cantidad', width: 152, align: 'center' },
     ],
     rows: [
-      ['Total Employees', String(summary.totalEmployees)],
-      ['Total Clock-In Infractions (>10 min)', String(summary.totalInfractions)],
-      ['Employees with Infractions', String(summary.employeesWithInfractions)],
-      ['Total Clock-In Flags (>5 min)', String(summary.totalFlags)],
-      ['Employees with Flags Only (no infractions)', String(summary.employeesFlagsOnly)],
-      ['Employees with Any Issue', String(summary.employeesWithAnyIssue)],
-      ['Clean Record (no issues)', String(summary.cleanRecord)],
+      ['Total de Empleados', String(summary.totalEmployees)],
+      ['Total de Infracciones de Entrada (>10 min)', String(summary.totalInfractions)],
+      ['Empleados con Infracciones', String(summary.employeesWithInfractions)],
+      ['Total de Alertas de Entrada (>5 min)', String(summary.totalFlags)],
+      ['Empleados solo con Alertas (sin infracciones)', String(summary.employeesFlagsOnly)],
+      ['Empleados con Algún Problema', String(summary.employeesWithAnyIssue)],
+      ['Récord Limpio (sin problemas)', String(summary.cleanRecord)],
     ],
     headerBg: COLORS.darkHeader,
     rowH: 24,
@@ -619,19 +619,19 @@ function buildFullReportPDF(doc, report, records) {
   // ── Page 2+: Infractions Table ──
   doc.addPage();
   doc.fontSize(16).font('Helvetica-Bold').fillColor(COLORS.red)
-    .text('Clock-In Infractions (Late > 10 minutes)');
+    .text('Infracciones de Entrada (Tarde > 10 minutos)');
   doc.moveDown(0.3);
   doc.fontSize(9).font('Helvetica').fillColor(COLORS.dark)
-    .text('Employees who clocked in more than 10 minutes after their scheduled time. These entries require an infraction notice per company policy.');
+    .text('Empleados que registraron entrada más de 10 minutos después de su hora programada. Estas entradas requieren un aviso de infracción según la política de la empresa.');
   doc.moveDown(0.5);
 
   if (infractions.length > 0) {
     drawStyledTable(doc, {
       cols: [
-        { label: 'Employee', width: 230 },
-        { label: 'Date', width: 100, align: 'center' },
-        { label: 'Clock-In Variance', width: 110, align: 'center' },
-        { label: 'Minutes Late', width: 92, align: 'center' },
+        { label: 'Empleado', width: 230 },
+        { label: 'Fecha', width: 100, align: 'center' },
+        { label: 'Variación de Entrada', width: 110, align: 'center' },
+        { label: 'Min. Tarde', width: 92, align: 'center' },
       ],
       rows: infractions.map(r => [
         r.employee_name,
@@ -650,19 +650,19 @@ function buildFullReportPDF(doc, report, records) {
   else doc.moveDown(1.5);
 
   doc.fontSize(16).font('Helvetica-Bold').fillColor(COLORS.orange)
-    .text('Clock-In Flags (Late > 5 minutes, <= 10 minutes)');
+    .text('Alertas de Entrada (Tarde > 5 minutos, <= 10 minutos)');
   doc.moveDown(0.3);
   doc.fontSize(9).font('Helvetica').fillColor(COLORS.dark)
-    .text('Employees who clocked in between 5 and 10 minutes late. These are flagged as warnings and should be monitored.');
+    .text('Empleados que registraron entrada entre 5 y 10 minutos tarde. Estos se marcan como advertencias y deben ser monitoreados.');
   doc.moveDown(0.5);
 
   if (flags.length > 0) {
     drawStyledTable(doc, {
       cols: [
-        { label: 'Employee', width: 230 },
-        { label: 'Date', width: 100, align: 'center' },
-        { label: 'Clock-In Variance', width: 110, align: 'center' },
-        { label: 'Minutes Late', width: 92, align: 'center' },
+        { label: 'Empleado', width: 230 },
+        { label: 'Fecha', width: 100, align: 'center' },
+        { label: 'Variación de Entrada', width: 110, align: 'center' },
+        { label: 'Min. Tarde', width: 92, align: 'center' },
       ],
       rows: flags.map(r => [
         r.employee_name,
@@ -679,10 +679,10 @@ function buildFullReportPDF(doc, report, records) {
   // ── Employee Detail — Infracted Employees ──
   doc.addPage();
   doc.fontSize(16).font('Helvetica-Bold').fillColor(COLORS.dark)
-    .text('Employee Detail -- Infracted Employees', { align: 'center' });
+    .text('Detalle por Empleado -- Empleados con Infracciones', { align: 'center' });
   doc.moveDown(0.3);
   doc.fontSize(9).font('Helvetica').fillColor(COLORS.dark)
-    .text('Clock-in infraction and absence detail for every employee who clocked in 10 or more minutes late. Absences (no actual time recorded) are shown in blue.');
+    .text('Detalle de infracciones de entrada y ausencias para cada empleado que registró entrada 10 o más minutos tarde. Las ausencias (sin registro de entrada) se muestran en azul.');
   doc.moveDown(0.8);
 
   const infEmployees = [...new Set(infractions.map(r => r.employee_name))].sort();
@@ -697,21 +697,21 @@ function buildFullReportPDF(doc, report, records) {
     // Employee name with colored counts
     doc.font('Helvetica-BoldOblique').fontSize(11);
     doc.fillColor(COLORS.dark).text(`${empName} -- `, { continued: true });
-    doc.fillColor(COLORS.red).text(`${infCount} Infraction(s)`, { continued: absCount > 0 });
+    doc.fillColor(COLORS.red).text(`${infCount} Infracción(es)`, { continued: absCount > 0 });
     if (absCount > 0) {
       doc.fillColor(COLORS.dark).text(' | ', { continued: true });
-      doc.fillColor(COLORS.blue).text(`${absCount} Absence(s)`);
+      doc.fillColor(COLORS.blue).text(`${absCount} Ausencia(s)`);
     }
     doc.moveDown(0.3);
 
     drawStyledTable(doc, {
       cols: [
-        { label: 'Date', width: 80, align: 'center' },
-        { label: 'Actual Time', width: 90, align: 'center' },
-        { label: 'Scheduled Time', width: 95, align: 'center' },
-        { label: 'Clock-In Variance', width: 100, align: 'center' },
-        { label: 'Minutes Late', width: 82, align: 'center' },
-        { label: 'Status', width: 85, align: 'center' },
+        { label: 'Fecha', width: 80, align: 'center' },
+        { label: 'Hora Real', width: 90, align: 'center' },
+        { label: 'Hora Programada', width: 95, align: 'center' },
+        { label: 'Variación de Entrada', width: 100, align: 'center' },
+        { label: 'Min. Tarde', width: 82, align: 'center' },
+        { label: 'Estado', width: 85, align: 'center' },
       ],
       rows: empRecords.map(r => {
         const isAbs = r.classification === 'ABSENCE';
@@ -748,20 +748,20 @@ function drawInfractionNotice(doc, record, report) {
   // Header
   doc.fontSize(20).fillColor(COLORS.navy).text('La Rambla', { align: 'center' });
   doc.moveDown(0.3);
-  doc.fontSize(16).fillColor(COLORS.dark).text('Tardiness Infraction Notice', { align: 'center' });
+  doc.fontSize(16).fillColor(COLORS.dark).text('Aviso de Infracción por Tardanza', { align: 'center' });
   doc.moveDown(0.2);
   doc.fontSize(9).fillColor(COLORS.gray)
-    .text(`Pay Period: ${report.pay_period_start} to ${report.pay_period_end}`, { align: 'center' });
+    .text(`Período de Pago: ${report.pay_period_start} al ${report.pay_period_end}`, { align: 'center' });
   doc.moveDown(2);
 
   // Details
   doc.fontSize(11).fillColor(COLORS.dark);
   const details = [
-    ['Employee', record.employee_name],
-    ['Date of Infraction', record.shift_date],
-    ['Scheduled Clock-In', record.scheduled_in || 'N/A'],
-    ['Actual Clock-In', record.actual_in || 'N/A'],
-    ['Minutes Late', String(minutesLate)],
+    ['Empleado(a)', record.employee_name],
+    ['Fecha de Infracción', record.shift_date],
+    ['Hora Programada de Entrada', record.scheduled_in || 'N/A'],
+    ['Hora Real de Entrada', record.actual_in || 'N/A'],
+    ['Minutos Tarde', String(minutesLate)],
   ];
 
   for (const [label, val] of details) {
@@ -773,15 +773,16 @@ function drawInfractionNotice(doc, record, report) {
   // Notice text
   doc.fontSize(10).fillColor(COLORS.dark);
   doc.text(
-    'This notice serves as a formal record that the above-named employee arrived late to their ' +
-    'scheduled shift. Per company attendance policy, employees are expected to clock in at or before ' +
-    'their scheduled start time. Repeated tardiness may result in further disciplinary action.',
+    'Este aviso sirve como constancia formal de que el/la empleado(a) mencionado(a) llegó tarde a su ' +
+    'turno programado. De acuerdo con la política de asistencia de la empresa, se espera que los empleados ' +
+    'registren su entrada a la hora programada o antes. La tardanza repetida puede resultar en acciones ' +
+    'disciplinarias adicionales.',
     { lineGap: 4 }
   );
   doc.moveDown(1);
   doc.text(
-    'By signing below, both the employee and manager acknowledge this infraction has been reviewed ' +
-    'and discussed.',
+    'Al firmar a continuación, tanto el/la empleado(a) como el/la gerente reconocen que esta infracción ' +
+    'ha sido revisada y discutida.',
     { lineGap: 4 }
   );
   doc.moveDown(3);
@@ -792,13 +793,13 @@ function drawInfractionNotice(doc, record, report) {
 
   // Employee signature
   doc.text('_________________________________________', 50, sigY);
-  doc.text('Employee Signature', 50, sigY + 16);
-  doc.text('Date: _______________', 50, sigY + 32);
+  doc.text('Firma del Empleado(a)', 50, sigY + 16);
+  doc.text('Fecha: _______________', 50, sigY + 32);
 
   // Manager signature
   doc.text('_________________________________________', 330, sigY);
-  doc.text('Manager Signature', 330, sigY + 16);
-  doc.text('Date: _______________', 330, sigY + 32);
+  doc.text('Firma del Gerente', 330, sigY + 16);
+  doc.text('Fecha: _______________', 330, sigY + 32);
 }
 
 /**

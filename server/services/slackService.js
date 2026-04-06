@@ -18,19 +18,20 @@ function isConfigured() {
   return !!process.env.SLACK_WEBHOOK_URL;
 }
 
-/** @returns {boolean} Whether a Slack bot token is configured. */
+/** @returns {boolean} Whether a Slack bot/user token is configured. */
 function isBotConfigured() {
-  return !!process.env.SLACK_BOT_TOKEN;
+  return !!(process.env.SLACK_BOT_TOKEN || process.env.SLACK_USER_TOKEN);
 }
 
 /**
- * Read and validate the bot token from environment.
- * @returns {string} The bot token
- * @throws {Error} If SLACK_BOT_TOKEN is not set
+ * Read and validate the Slack token from environment.
+ * Prefers SLACK_BOT_TOKEN, falls back to SLACK_USER_TOKEN.
+ * @returns {string} The token
+ * @throws {Error} If no Slack token is set
  */
 function requireBotToken() {
-  const token = process.env.SLACK_BOT_TOKEN;
-  if (!token) throw new Error('SLACK_BOT_TOKEN not configured in .env');
+  const token = process.env.SLACK_BOT_TOKEN || process.env.SLACK_USER_TOKEN;
+  if (!token) throw new Error('Slack bot not configured — set SLACK_BOT_TOKEN or SLACK_USER_TOKEN in .env');
   return token;
 }
 

@@ -5,45 +5,63 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>La Rambla — Restaurant Admin Hub</title>
   <link rel="stylesheet" href="/css/style.css">
-  <link rel="icon" href="/img/favicon.ico" type="image/x-icon">
+  <link rel="icon" type="image/x-icon" href="/img/favicon.ico">
+  <link rel="icon" type="image/png" sizes="192x192" href="/img/icon-192.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/img/apple-touch-icon.png">
   <meta name="theme-color" content="#004F71">
 </head>
 <body>
   <header class="app-header">
     <div class="header-brand">
-      <img src="/img/logo.png" alt="La Rambla" onerror="this.style.display='none'">
+      <div class="tab-nav">
+        <button class="tab-nav-toggle" onclick="toggleTabMenu()" aria-label="Menu">
+          <span class="tab-nav-icon">&#9776;</span>
+        </button>
+        <div class="tab-nav-menu" id="tabNavMenu">
+          <button class="tab-nav-item active" data-tab="dashboard" onclick="switchTab('dashboard')">&#128202; Dashboard</button>
+          <button class="tab-nav-item" data-tab="employees" onclick="switchTab('employees')">&#128101; Employees</button>
+          <button class="tab-nav-item" data-tab="requests" onclick="switchTab('requests')">&#128197; Time-Off Requests <span id="reqBadge" class="tab-badge hidden">0</span></button>
+          <!-- Record Time-Off moved into Employees tab -->
+          <button class="tab-nav-item" data-tab="compliance" onclick="switchTab('compliance')">&#9888;&#65039; Tardiness &amp; Meals</button>
+          <button class="tab-nav-item" data-tab="reconciliation" onclick="switchTab('reconciliation')">&#128176; Reconciliation</button>
+          <button class="tab-nav-item" data-tab="performance" onclick="switchTab('performance')">&#11088; Performance Reviews</button>
+          <button class="tab-nav-item" data-tab="ac-evals" onclick="switchTab('ac-evals')">&#9989; Hospitality Evaluations</button>
+          <button class="tab-nav-item" data-tab="leadership" onclick="switchTab('leadership')">&#127891; Leadership Academy</button>
+          <button class="tab-nav-item" data-tab="scorecard" onclick="switchTab('scorecard')">&#128200; Executive Scorecard</button>
+          <button class="tab-nav-item" data-tab="social-posts" onclick="switchTab('social-posts')">&#128247; Social Posts</button>
+          <button class="tab-nav-item" data-tab="gastos" onclick="switchTab('gastos')" id="tabBtnGastos" style="display:none;">&#128176; Gastos</button>
+          <button class="tab-nav-item" data-tab="apprenticeship" onclick="switchTab('apprenticeship')" id="tabBtnAppr">&#127891; Apprenticeship</button>
+          <button class="tab-nav-item" data-tab="accounts" onclick="switchTab('accounts')">&#128274; User Accounts</button>
+        </div>
+      </div>
+      <img src="/img/cfa-logo-red.png" alt="Chick-fil-A" style="height:56px; object-fit:contain; margin:-8px 0;" onerror="this.style.display='none'">
       <div class="header-divider"></div>
       <h1>Admin Hub</h1>
     </div>
-    <button class="hamburger-btn" onclick="toggleMobileMenu()" aria-label="Menu">&#9776;</button>
-    <div class="header-actions">
-      <span id="userInfo"></span>
-      <div style="position:relative;">
+    <div class="header-right">
+      <div style="position:relative;" class="notif-wrapper">
         <button class="btn btn-sm notification-bell" id="notificationBell" onclick="toggleNotifications()">&#128276; <span id="notifCount" class="notif-count hidden">0</span></button>
         <div id="notifDropdown" class="notif-dropdown hidden">
           <div class="notif-header">Notifications</div>
           <div id="notifList"></div>
         </div>
       </div>
-      <button class="btn btn-sm" onclick="showNotifSettings()" title="Notification Settings">&#9881; Settings</button>
-      <button class="btn btn-sm" onclick="showChangePassword()">Change Password</button>
-      <button class="btn btn-sm" onclick="logout()">Sign Out</button>
+      <div class="user-menu-wrapper">
+        <button class="user-menu-btn" onclick="toggleUserMenu()" aria-label="User menu">
+          <span id="userInfo"></span>
+          <span class="user-menu-arrow">&#9662;</span>
+        </button>
+        <div class="user-menu-dropdown" id="userMenuDropdown">
+          <button onclick="showNotifSettings()">&#9881; Settings</button>
+          <button onclick="showChangePassword()">&#128274; Change Password</button>
+          <div class="user-menu-divider"></div>
+          <button onclick="logout()">&#128682; Sign Out</button>
+        </div>
+      </div>
     </div>
   </header>
 
   <div class="main-content">
-    <!-- Tabs -->
-    <div class="tabs">
-      <button class="tab active" data-tab="dashboard" onclick="switchTab('dashboard')">Dashboard</button>
-      <button class="tab" data-tab="employees" onclick="switchTab('employees')">Employees</button>
-      <button class="tab" data-tab="import" onclick="switchTab('import')">Import Data</button>
-      <button class="tab" data-tab="requests" onclick="switchTab('requests')">Time-Off Requests <span id="reqBadge" class="tab-badge hidden">0</span></button>
-      <button class="tab" data-tab="timeoff" onclick="switchTab('timeoff')">Record Time-Off</button>
-      <button class="tab" data-tab="tardiness" onclick="switchTab('tardiness')">Tardiness</button>
-      <button class="tab" data-tab="mealpenalty" onclick="switchTab('mealpenalty')">Meal Penalties</button>
-      <button class="tab" data-tab="reconciliation" onclick="switchTab('reconciliation')">Reconciliation</button>
-      <button class="tab" data-tab="accounts" onclick="switchTab('accounts')">User Accounts</button>
-    </div>
 
     <!-- Alert Banner for Pending Requests -->
     <div id="pendingRequestsAlert" class="alert-banner hidden" style="border-left-color: var(--brand-red);">
@@ -152,6 +170,22 @@
             <option value="hourly">Hourly</option>
             <option value="exempt">Exempt</option>
           </select>
+          <select id="empDeptFilter" onchange="filterEmployeeTable()" style="width:auto;">
+            <option value="">All Depts</option>
+            <option value="FOH">FOH</option>
+            <option value="BOH">BOH</option>
+            <option value="BOH/FOH">BOH/FOH</option>
+          </select>
+          <select id="empRoleFilter" onchange="filterEmployeeTable()" style="width:auto;">
+            <option value="">All Roles</option>
+            <option value="Team Member">Team Member</option>
+            <option value="Senior Team Member">Senior TM</option>
+            <option value="Trainer">Trainer</option>
+            <option value="Shift Leader">Shift Leader</option>
+            <option value="Director">Director</option>
+            <option value="Senior Director">Sr. Director</option>
+            <option value="Administrator">Administrator</option>
+          </select>
           <select id="empStatusFilter" onchange="filterEmployeeTable()" style="width:auto;">
             <option value="">All Status</option>
             <option value="active" selected>Active</option>
@@ -163,6 +197,8 @@
           <thead>
             <tr>
               <th>Name</th>
+              <th>Role</th>
+              <th>Dept</th>
               <th>Type</th>
               <th>Status</th>
               <th>First Clock-In</th>
@@ -173,39 +209,89 @@
           <tbody id="employeeBody"></tbody>
         </table>
       </div>
-    </div>
 
-    <!-- Import Tab -->
-    <div id="tab-import" style="display:none;">
-      <div class="detail-panel">
-        <h2>Import Wage Export Data</h2>
-        <p style="color:var(--text-light); margin-bottom:1rem;">Upload your payroll wage export file (Excel or CSV). The system will parse it, create/update employees, and recalculate accruals.</p>
-
-        <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
-          <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" onchange="handleFileSelect(this)">
-          <svg class="upload-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"/></svg>
-          <p class="upload-label">Click to upload or drag and drop</p>
-          <p class="upload-sublabel">.xlsx, .xls, or .csv files</p>
+      <!-- Import Section (embedded in Employees tab) -->
+      <div class="detail-panel" style="margin-top:1.5rem;">
+        <div style="display:flex; align-items:center; gap:1rem; margin-bottom:0.75rem; cursor:pointer;" onclick="document.getElementById('importCollapse').style.display = document.getElementById('importCollapse').style.display==='none'?'':'none'; this.querySelector('.collapse-arrow').classList.toggle('open');">
+          <h2 style="margin:0;">&#128228; Import Payroll Data</h2>
+          <span class="collapse-arrow" style="font-size:0.75rem; transition:transform 0.2s; transform:rotate(-90deg);">&#9660;</span>
         </div>
+        <div id="importCollapse" style="display:none;">
+          <p style="color:var(--text-light); margin-bottom:1rem;">Upload your payroll wage export file (Excel or CSV). The system will parse it, create/update employees, and recalculate accruals.</p>
 
-        <div id="previewSection" style="display:none; margin-top:1.5rem;">
-          <h3 style="margin-bottom:0.75rem; color: var(--brand-navy);">Import Preview</h3>
-          <div id="previewStats" class="stats-grid"></div>
-          <div class="table-container" style="max-height:400px; overflow-y:auto;">
-            <table>
-              <thead><tr><th>Employee</th><th>Months</th><th class="text-right">Total Hours</th><th>Date Range</th></tr></thead>
-              <tbody id="previewBody"></tbody>
-            </table>
+          <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+            <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" onchange="handleFileSelect(this)">
+            <svg class="upload-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"/></svg>
+            <p class="upload-label">Click to upload or drag and drop</p>
+            <p class="upload-sublabel">.xlsx, .xls, or .csv files</p>
           </div>
-          <div style="margin-top:1rem; display:flex; gap:0.75rem;">
-            <button class="btn btn-primary" onclick="commitImport()">Confirm Import</button>
-            <button class="btn" onclick="cancelImport()">Cancel</button>
+
+          <div id="previewSection" style="display:none; margin-top:1.5rem;">
+            <h3 style="margin-bottom:0.75rem; color: var(--brand-navy);">Import Preview</h3>
+            <div id="previewStats" class="stats-grid"></div>
+            <div class="table-container" style="max-height:400px; overflow-y:auto;">
+              <table>
+                <thead><tr><th>Employee</th><th>Months</th><th class="text-right">Total Hours</th><th>Date Range</th></tr></thead>
+                <tbody id="previewBody"></tbody>
+              </table>
+            </div>
+            <div style="margin-top:1rem; display:flex; gap:0.75rem;">
+              <button class="btn btn-primary" onclick="commitImport()">Confirm Import</button>
+              <button class="btn" onclick="cancelImport()">Cancel</button>
+            </div>
           </div>
+
+          <div id="importResult" style="display:none; margin-top:1.5rem;" class="detail-panel"></div>
         </div>
+      </div>
 
-        <div id="importResult" style="display:none; margin-top:1.5rem;" class="detail-panel"></div>
+      <!-- Record Time-Off Section (embedded in Employees tab) -->
+      <div class="detail-panel" style="margin-top:1.5rem;">
+        <div style="display:flex; align-items:center; gap:1rem; margin-bottom:0.75rem; cursor:pointer;" onclick="document.getElementById('timeoffCollapse').style.display = document.getElementById('timeoffCollapse').style.display==='none'?'':'none'; this.querySelector('.collapse-arrow').classList.toggle('open'); if(document.getElementById('timeoffCollapse').style.display!=='none') loadTimeOffForm();">
+          <h2 style="margin:0;">&#9201; Record Time-Off</h2>
+          <span class="collapse-arrow" style="font-size:0.75rem; transition:transform 0.2s; transform:rotate(-90deg);">&#9660;</span>
+        </div>
+        <div id="timeoffCollapse" style="display:none;">
+          <p style="color:var(--text-light); margin-bottom:1rem;">Record sick days, vacation days, or vacation liquidation for an employee.</p>
+          <form id="timeOffForm" onsubmit="submitTimeOff(event)" style="max-width:500px;">
+            <div class="form-group">
+              <label for="toEmployee">Employee</label>
+              <select id="toEmployee" required></select>
+              <label style="display:inline-flex; align-items:center; gap:0.4rem; margin-top:0.4rem; font-size:0.8rem; color:var(--text-light); cursor:pointer;">
+                <input type="checkbox" id="toShowInactive" onchange="loadTimeOffForm()"> Include inactive employees
+              </label>
+            </div>
+            <div class="form-group">
+              <label for="toType">Type</label>
+              <select id="toType" required onchange="onTimeOffTypeChange()">
+                <option value="sick">Sick</option>
+                <option value="vacation">Vacation</option>
+                <option value="vacation_liquidation">Vacation Liquidation (Payout)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="toDays">Days</label>
+              <div style="display:flex; gap:0.5rem; align-items:center;">
+                <input type="number" id="toDays" step="0.125" min="0.125" required style="flex:1;">
+                <button type="button" class="btn btn-sm" id="liquidateAllBtn" style="display:none;" onclick="fillVacationBalance()">Use Full Balance</button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="toDate">Date</label>
+              <input type="date" id="toDate" required>
+            </div>
+            <div class="form-group">
+              <label for="toNotes">Notes</label>
+              <textarea id="toNotes" rows="2"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Record Time-Off</button>
+          </form>
+        </div>
       </div>
     </div>
+
+    <!-- Keep hidden compat divs for backward hash links -->
+    <div id="tab-import" style="display:none;"></div>
 
     <!-- Time-Off Requests Tab -->
     <div id="tab-requests" style="display:none;">
@@ -236,200 +322,176 @@
       </div>
     </div>
 
-    <!-- Record Time-Off Tab -->
-    <div id="tab-timeoff" style="display:none;">
-      <div class="detail-panel" style="max-width:600px;">
-        <h2>Record Time-Off Taken</h2>
-        <form id="timeOffForm" onsubmit="submitTimeOff(event)">
-          <div class="form-group">
-            <label for="toEmployee">Employee</label>
-            <select id="toEmployee" required></select>
-            <label style="display:inline-flex; align-items:center; gap:0.4rem; margin-top:0.4rem; font-size:0.8rem; color:var(--text-light); cursor:pointer;">
-              <input type="checkbox" id="toShowInactive" onchange="loadTimeOffForm()"> Include inactive employees
-            </label>
+    <!-- Record Time-Off moved into Employees tab; keep hidden div for hash compat -->
+    <div id="tab-timeoff" style="display:none;"></div>
+
+    <!-- Compliance Tab (Tardiness + Meal Penalties combined) -->
+    <div id="tab-compliance" style="display:none;">
+      <!-- Toggle -->
+      <div style="display:flex; align-items:center; gap:0; border-bottom:2px solid var(--border); padding:0 1.5rem;">
+        <button id="compToggleTardiness" class="comp-toggle active" onclick="compSwitchMode('tardiness')">&#9200; Tardiness</button>
+        <button id="compToggleMealpenalty" class="comp-toggle" onclick="compSwitchMode('mealpenalty')">&#127860; Meal Penalties</button>
+      </div>
+
+      <!-- Tardiness Pane -->
+      <div id="comp-tardiness">
+        <div class="detail-panel">
+          <h2>Tardiness Analysis</h2>
+          <p style="color:var(--text-light); margin-bottom:1rem;">Upload a Cowork Punch Variance Report (PDF) to analyze employee clock-in tardiness, generate reports, and auto-post results to Slack.</p>
+
+          <div class="upload-area" id="tardinessUploadArea" onclick="document.getElementById('tardinessFileInput').click()">
+            <input type="file" id="tardinessFileInput" accept=".pdf" style="display:none;" onchange="handleTardinessFile(this)">
+            <svg class="upload-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0 3 3m-3-3-3 3M6.75 19.5a4.5 4.5 0 0 1-1.41-8.775 5.25 5.25 0 0 1 10.233-2.33 3 3 0 0 1 3.758 3.848A3.752 3.752 0 0 1 18 19.5H6.75Z"/></svg>
+            <p class="upload-label">Click to upload or drag and drop</p>
+            <p class="upload-sublabel">Punch Variance Report (.pdf)</p>
           </div>
-          <div class="form-group">
-            <label for="toType">Type</label>
-            <select id="toType" required onchange="onTimeOffTypeChange()">
-              <option value="sick">Sick</option>
-              <option value="vacation">Vacation</option>
-              <option value="vacation_liquidation">Vacation Liquidation (Payout)</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="toDays">Days</label>
-            <div style="display:flex; gap:0.5rem; align-items:center;">
-              <input type="number" id="toDays" step="0.125" min="0.125" required style="flex:1;">
-              <button type="button" class="btn btn-sm" id="liquidateAllBtn" style="display:none;" onclick="fillVacationBalance()">Use Full Balance</button>
+
+          <!-- Preview Section -->
+          <div id="tardinessPreview" style="display:none; margin-top:1.5rem;">
+            <h3 style="margin-bottom:0.75rem; color: var(--brand-navy);">Analysis Preview</h3>
+            <div id="tardinessPreviewStats" class="stats-grid"></div>
+
+            <div id="tardinessInfractionsList" style="margin-top:1rem;">
+              <div class="section-header">
+                <span class="indicator" style="background:var(--brand-red);"></span>
+                <h4>Infractions (&ge;10 min late)</h4>
+                <span class="section-count" id="infractionCount">0</span>
+              </div>
+              <div class="table-container" style="max-height:300px; overflow-y:auto;">
+                <table>
+                  <thead><tr><th>Employee</th><th>Date</th><th>Scheduled</th><th>Actual</th><th class="text-right">Minutes Late</th><th style="width:40px;"></th></tr></thead>
+                  <tbody id="tardinessInfractionsBody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div id="tardinessFlagsList" style="margin-top:1rem;">
+              <div class="section-header">
+                <span class="indicator" style="background:var(--brand-yellow);"></span>
+                <h4>Flags (5&ndash;10 min late)</h4>
+                <span class="section-count" id="flagCountBadge">0</span>
+              </div>
+              <div class="table-container" style="max-height:200px; overflow-y:auto;">
+                <table>
+                  <thead><tr><th>Employee</th><th>Date</th><th>Scheduled</th><th>Actual</th><th class="text-right">Minutes Late</th></tr></thead>
+                  <tbody id="tardinessFlagsBody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div id="tardinessAbsencesList" style="margin-top:1rem;">
+              <div class="section-header">
+                <span class="indicator" style="background:var(--brand-navy);"></span>
+                <h4>Absences (No Clock-In)</h4>
+                <span class="section-count" id="absenceCount">0</span>
+              </div>
+              <div class="table-container" style="max-height:200px; overflow-y:auto;">
+                <table>
+                  <thead><tr><th>Employee</th><th>Date</th><th>Scheduled In</th><th>Scheduled Out</th></tr></thead>
+                  <tbody id="tardinessAbsencesBody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div style="margin-top:1rem; display:flex; gap:0.75rem;">
+              <button class="btn btn-primary" onclick="commitTardiness(this)">Save & Post to Slack</button>
+              <button class="btn" onclick="cancelTardiness()">Cancel</button>
             </div>
           </div>
-          <div class="form-group">
-            <label for="toDate">Date</label>
-            <input type="date" id="toDate" required>
+
+          <!-- Result Section -->
+          <div id="tardinessResult" style="display:none; margin-top:1.5rem;" class="detail-panel"></div>
+        </div>
+
+        <!-- History -->
+        <div style="margin-top:2rem;">
+          <h3 class="section-title"><span class="section-title-icon">&#128203;</span> Previous Reports</h3>
+          <div class="table-container">
+            <table class="responsive-table">
+              <thead>
+                <tr>
+                  <th>Pay Period</th>
+                  <th class="text-right">Employees</th>
+                  <th class="text-right">Infractions</th>
+                  <th class="text-right">Flags</th>
+                  <th class="text-right">Absences</th>
+                  <th>Uploaded</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="tardinessHistoryBody"></tbody>
+            </table>
           </div>
-          <div class="form-group">
-            <label for="toNotes">Notes</label>
-            <textarea id="toNotes" rows="2"></textarea>
+        </div>
+      </div>
+
+      <!-- Meal Penalty Pane -->
+      <div id="comp-mealpenalty" style="display:none;">
+        <div class="detail-panel">
+          <h2>Meal Penalty Analysis</h2>
+          <p style="color:var(--text-light); margin-bottom:1rem;">Upload a Cowork Employee Time Detail Report (PDF) to detect meal penalty violations. A meal penalty occurs when an employee works more than 6 consecutive hours without taking any break.</p>
+
+          <div class="upload-area" id="mealPenaltyUploadArea" onclick="document.getElementById('mealPenaltyFileInput').click()">
+            <input type="file" id="mealPenaltyFileInput" accept=".pdf" style="display:none;" onchange="handleMealPenaltyFile(this)">
+            <svg class="upload-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0 3 3m-3-3-3 3M6.75 19.5a4.5 4.5 0 0 1-1.41-8.775 5.25 5.25 0 0 1 10.233-2.33 3 3 0 0 1 3.758 3.848A3.752 3.752 0 0 1 18 19.5H6.75Z"/></svg>
+            <p class="upload-label">Click to upload or drag and drop</p>
+            <p class="upload-sublabel">Employee Time Detail Report (.pdf)</p>
           </div>
-          <button type="submit" class="btn btn-primary">Record Time-Off</button>
-        </form>
+
+          <!-- Preview Section -->
+          <div id="mealPenaltyPreview" style="display:none; margin-top:1.5rem;">
+            <h3 style="margin-bottom:0.75rem; color: var(--brand-navy);">Analysis Preview</h3>
+            <div id="mealPenaltyPreviewStats" class="stats-grid"></div>
+
+            <div style="margin-top:1rem;">
+              <div class="section-header">
+                <span class="indicator" style="background:var(--brand-red);"></span>
+                <h4>Meal Penalty Violations</h4>
+                <span class="section-count" id="mealPenaltyCount">0</span>
+              </div>
+              <div class="table-container" style="max-height:400px; overflow-y:auto;">
+                <table>
+                  <thead><tr><th>Employee</th><th>Date</th><th>Shift Period</th><th class="text-right">Consecutive Hours</th></tr></thead>
+                  <tbody id="mealPenaltyPreviewBody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div style="margin-top:1rem; display:flex; gap:0.75rem;">
+              <button class="btn btn-primary" onclick="commitMealPenalty(this)">Save Report</button>
+              <button class="btn" onclick="cancelMealPenalty()">Cancel</button>
+            </div>
+          </div>
+
+          <!-- Result Section -->
+          <div id="mealPenaltyResult" style="display:none; margin-top:1.5rem;" class="detail-panel"></div>
+        </div>
+
+        <!-- History -->
+        <div style="margin-top:2rem;">
+          <h3 class="section-title"><span class="section-title-icon">&#128203;</span> Previous Reports</h3>
+          <div class="table-container">
+            <table class="responsive-table">
+              <thead>
+                <tr>
+                  <th>Date Range</th>
+                  <th class="text-right">Employees</th>
+                  <th class="text-right">Penalties</th>
+                  <th class="text-right">With Penalties</th>
+                  <th>Uploaded</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="mealPenaltyHistoryBody"></tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- Tardiness Tab -->
-    <div id="tab-tardiness" style="display:none;">
-      <div class="detail-panel">
-        <h2>Tardiness Analysis</h2>
-        <p style="color:var(--text-light); margin-bottom:1rem;">Upload a Cowork Punch Variance Report (PDF) to analyze employee clock-in tardiness, generate reports, and auto-post results to Slack.</p>
-
-        <div class="upload-area" id="tardinessUploadArea" onclick="document.getElementById('tardinessFileInput').click()">
-          <input type="file" id="tardinessFileInput" accept=".pdf" style="display:none;" onchange="handleTardinessFile(this)">
-          <svg class="upload-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0 3 3m-3-3-3 3M6.75 19.5a4.5 4.5 0 0 1-1.41-8.775 5.25 5.25 0 0 1 10.233-2.33 3 3 0 0 1 3.758 3.848A3.752 3.752 0 0 1 18 19.5H6.75Z"/></svg>
-          <p class="upload-label">Click to upload or drag and drop</p>
-          <p class="upload-sublabel">Punch Variance Report (.pdf)</p>
-        </div>
-
-        <!-- Preview Section -->
-        <div id="tardinessPreview" style="display:none; margin-top:1.5rem;">
-          <h3 style="margin-bottom:0.75rem; color: var(--brand-navy);">Analysis Preview</h3>
-          <div id="tardinessPreviewStats" class="stats-grid"></div>
-
-          <div id="tardinessInfractionsList" style="margin-top:1rem;">
-            <div class="section-header">
-              <span class="indicator" style="background:var(--brand-red);"></span>
-              <h4>Infractions (≥10 min late)</h4>
-              <span class="section-count" id="infractionCount">0</span>
-            </div>
-            <div class="table-container" style="max-height:300px; overflow-y:auto;">
-              <table>
-                <thead><tr><th>Employee</th><th>Date</th><th>Scheduled</th><th>Actual</th><th class="text-right">Minutes Late</th><th style="width:40px;"></th></tr></thead>
-                <tbody id="tardinessInfractionsBody"></tbody>
-              </table>
-            </div>
-          </div>
-
-          <div id="tardinessFlagsList" style="margin-top:1rem;">
-            <div class="section-header">
-              <span class="indicator" style="background:var(--brand-yellow);"></span>
-              <h4>Flags (5–10 min late)</h4>
-              <span class="section-count" id="flagCountBadge">0</span>
-            </div>
-            <div class="table-container" style="max-height:200px; overflow-y:auto;">
-              <table>
-                <thead><tr><th>Employee</th><th>Date</th><th>Scheduled</th><th>Actual</th><th class="text-right">Minutes Late</th></tr></thead>
-                <tbody id="tardinessFlagsBody"></tbody>
-              </table>
-            </div>
-          </div>
-
-          <div id="tardinessAbsencesList" style="margin-top:1rem;">
-            <div class="section-header">
-              <span class="indicator" style="background:var(--brand-navy);"></span>
-              <h4>Absences (No Clock-In)</h4>
-              <span class="section-count" id="absenceCount">0</span>
-            </div>
-            <div class="table-container" style="max-height:200px; overflow-y:auto;">
-              <table>
-                <thead><tr><th>Employee</th><th>Date</th><th>Scheduled In</th><th>Scheduled Out</th></tr></thead>
-                <tbody id="tardinessAbsencesBody"></tbody>
-              </table>
-            </div>
-          </div>
-
-          <div style="margin-top:1rem; display:flex; gap:0.75rem;">
-            <button class="btn btn-primary" onclick="commitTardiness(this)">Save & Post to Slack</button>
-            <button class="btn" onclick="cancelTardiness()">Cancel</button>
-          </div>
-        </div>
-
-        <!-- Result Section -->
-        <div id="tardinessResult" style="display:none; margin-top:1.5rem;" class="detail-panel"></div>
-      </div>
-
-      <!-- History -->
-      <div style="margin-top:2rem;">
-        <h3 class="section-title"><span class="section-title-icon">&#128203;</span> Previous Reports</h3>
-        <div class="table-container">
-          <table class="responsive-table">
-            <thead>
-              <tr>
-                <th>Pay Period</th>
-                <th class="text-right">Employees</th>
-                <th class="text-right">Infractions</th>
-                <th class="text-right">Flags</th>
-                <th class="text-right">Absences</th>
-                <th>Uploaded</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody id="tardinessHistoryBody"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- Meal Penalties Tab -->
-    <div id="tab-mealpenalty" style="display:none;">
-      <div class="detail-panel">
-        <h2>Meal Penalty Analysis</h2>
-        <p style="color:var(--text-light); margin-bottom:1rem;">Upload a Cowork Employee Time Detail Report (PDF) to detect meal penalty violations. A meal penalty occurs when an employee works more than 6 consecutive hours without taking any break.</p>
-
-        <div class="upload-area" id="mealPenaltyUploadArea" onclick="document.getElementById('mealPenaltyFileInput').click()">
-          <input type="file" id="mealPenaltyFileInput" accept=".pdf" style="display:none;" onchange="handleMealPenaltyFile(this)">
-          <svg class="upload-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0 3 3m-3-3-3 3M6.75 19.5a4.5 4.5 0 0 1-1.41-8.775 5.25 5.25 0 0 1 10.233-2.33 3 3 0 0 1 3.758 3.848A3.752 3.752 0 0 1 18 19.5H6.75Z"/></svg>
-          <p class="upload-label">Click to upload or drag and drop</p>
-          <p class="upload-sublabel">Employee Time Detail Report (.pdf)</p>
-        </div>
-
-        <!-- Preview Section -->
-        <div id="mealPenaltyPreview" style="display:none; margin-top:1.5rem;">
-          <h3 style="margin-bottom:0.75rem; color: var(--brand-navy);">Analysis Preview</h3>
-          <div id="mealPenaltyPreviewStats" class="stats-grid"></div>
-
-          <div style="margin-top:1rem;">
-            <div class="section-header">
-              <span class="indicator" style="background:var(--brand-red);"></span>
-              <h4>Meal Penalty Violations</h4>
-              <span class="section-count" id="mealPenaltyCount">0</span>
-            </div>
-            <div class="table-container" style="max-height:400px; overflow-y:auto;">
-              <table>
-                <thead><tr><th>Employee</th><th>Date</th><th>Shift Period</th><th class="text-right">Consecutive Hours</th></tr></thead>
-                <tbody id="mealPenaltyPreviewBody"></tbody>
-              </table>
-            </div>
-          </div>
-
-          <div style="margin-top:1rem; display:flex; gap:0.75rem;">
-            <button class="btn btn-primary" onclick="commitMealPenalty(this)">Save Report</button>
-            <button class="btn" onclick="cancelMealPenalty()">Cancel</button>
-          </div>
-        </div>
-
-        <!-- Result Section -->
-        <div id="mealPenaltyResult" style="display:none; margin-top:1.5rem;" class="detail-panel"></div>
-      </div>
-
-      <!-- History -->
-      <div style="margin-top:2rem;">
-        <h3 class="section-title"><span class="section-title-icon">&#128203;</span> Previous Reports</h3>
-        <div class="table-container">
-          <table class="responsive-table">
-            <thead>
-              <tr>
-                <th>Date Range</th>
-                <th class="text-right">Employees</th>
-                <th class="text-right">Penalties</th>
-                <th class="text-right">With Penalties</th>
-                <th>Uploaded</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody id="mealPenaltyHistoryBody"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+    <!-- Hidden compat divs for old hash links -->
+    <div id="tab-tardiness" style="display:none;"></div>
+    <div id="tab-mealpenalty" style="display:none;"></div>
 
     <!-- Reconciliation Tab -->
     <div id="tab-reconciliation" style="display:none;">
@@ -441,62 +503,36 @@
           and credit card statements and generates an interactive HTML report.
         </p>
 
-        <!-- Month/Year Picker -->
-        <div style="display:flex; gap:1rem; margin-bottom:1.5rem; flex-wrap:wrap;">
-          <div class="form-group" style="margin-bottom:0; flex:1; min-width:140px;">
-            <label for="reconMonth">Month</label>
-            <select id="reconMonth">
-              <option value="1">January</option>
-              <option value="2">February</option>
-              <option value="3">March</option>
-              <option value="4">April</option>
-              <option value="5">May</option>
-              <option value="6">June</option>
-              <option value="7">July</option>
-              <option value="8">August</option>
-              <option value="9">September</option>
-              <option value="10">October</option>
-              <option value="11">November</option>
-              <option value="12">December</option>
-            </select>
-          </div>
-          <div class="form-group" style="margin-bottom:0; flex:1; min-width:120px;">
-            <label for="reconYear">Year</label>
-            <select id="reconYear"></select>
-          </div>
-        </div>
-
-        <!-- 6 File Inputs -->
+        <!-- File Inputs (period auto-detected from files) -->
         <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:1rem; margin-bottom:1.5rem;">
-          <div class="recon-file-input">
-            <label for="reconGastos">1. GASTOS Expense Export</label>
-            <p class="upload-sublabel">R365 payment detail export (CSV)</p>
-            <input type="file" id="reconGastos" accept=".csv">
+          <div class="recon-file-input" style="grid-column: 1 / -1; border: 2px solid var(--brand-navy); background: #f0f4ff;">
+            <label for="reconGastos">GASTOS Expense Export(s) <span style="color:var(--danger); font-size:0.75rem;">REQUIRED</span></label>
+            <p class="upload-sublabel">R365 payment detail export — one or more months (CSV). Add additional files to include more data.</p>
+            <input type="file" id="reconGastos" accept=".csv" multiple>
           </div>
           <div class="recon-file-input">
-            <label for="reconChase">2. Chase CC Statement</label>
+            <label for="reconChase">Chase CC Statement</label>
             <p class="upload-sublabel">Chase Ink credit card activity (CSV)</p>
             <input type="file" id="reconChase" accept=".csv,.CSV">
+            <span class="cached-badge" id="cachedChase" style="display:none;"></span>
           </div>
           <div class="recon-file-input">
-            <label for="reconAmexPlat">3. AMEX Platinum Statement</label>
+            <label for="reconAmexPlat">AMEX Platinum Statement</label>
             <p class="upload-sublabel">American Express Platinum activity (XLSX)</p>
             <input type="file" id="reconAmexPlat" accept=".xlsx,.xls">
+            <span class="cached-badge" id="cachedAmexPlatinum" style="display:none;"></span>
           </div>
           <div class="recon-file-input">
-            <label for="reconAmexDelta">4. AMEX Delta Statement</label>
+            <label for="reconAmexDelta">AMEX Delta Statement</label>
             <p class="upload-sublabel">American Express Delta activity (XLSX)</p>
             <input type="file" id="reconAmexDelta" accept=".xlsx,.xls">
+            <span class="cached-badge" id="cachedAmexDelta" style="display:none;"></span>
           </div>
           <div class="recon-file-input">
-            <label for="reconBancoCurrent">5. Banco Popular — Current Month</label>
-            <p class="upload-sublabel">Bank statement export, current month (CSV)</p>
-            <input type="file" id="reconBancoCurrent" accept=".csv,.CSV">
-          </div>
-          <div class="recon-file-input">
-            <label for="reconBancoPrior">6. Banco Popular — Prior Month</label>
-            <p class="upload-sublabel">Bank statement export, prior month (CSV)</p>
-            <input type="file" id="reconBancoPrior" accept=".csv,.CSV">
+            <label for="reconBanco">Banco Popular Statement</label>
+            <p class="upload-sublabel">Bank statement export — both months auto-detected (CSV)</p>
+            <input type="file" id="reconBanco" accept=".csv,.CSV">
+            <span class="cached-badge" id="cachedBanco" style="display:none;"></span>
           </div>
         </div>
 
@@ -522,8 +558,43 @@
         <div id="reconResult" style="display:none; margin-top:1.5rem;" class="detail-panel"></div>
       </div>
 
+      <!-- Inline Report Viewer -->
+      <div id="reconViewer" style="display:none; margin-top:1rem;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.75rem; flex-wrap:wrap; gap:0.5rem;">
+          <div style="display:flex; align-items:center; gap:0.75rem;">
+            <h3 style="margin:0; color:var(--brand-navy);" id="reconViewerTitle">Reconciliation Report</h3>
+          </div>
+          <div style="display:flex; gap:0.5rem;">
+            <button class="btn btn-sm" onclick="toggleReconSectionPanel()">Sections</button>
+            <a class="btn btn-sm" id="reconNewTabLink" href="#" target="_blank">Open in New Tab</a>
+            <button class="btn btn-sm" onclick="closeReconViewer()">Close</button>
+          </div>
+        </div>
+
+        <!-- Section Toggle Panel -->
+        <div id="reconSectionPanel" style="display:none; margin-bottom:0.75rem; padding:0.75rem; background:#f8fafc; border:1px solid #e2e8f0; border-radius:var(--radius-md);">
+          <p style="font-size:0.75rem; color:var(--text-light); margin-bottom:0.5rem; font-weight:600;">Toggle Sections:</p>
+          <div style="display:flex; flex-wrap:wrap; gap:0.5rem 1rem;">
+            <label class="recon-toggle-label"><input type="checkbox" checked data-section="section-summary" onchange="toggleReconSection(this)"> Summary Cards</label>
+            <label class="recon-toggle-label"><input type="checkbox" checked data-section="section-progress" onchange="toggleReconSection(this)"> Progress Bar</label>
+            <label class="recon-toggle-label"><input type="checkbox" checked data-section="section-charts" onchange="toggleReconSection(this)"> Charts</label>
+            <label class="recon-toggle-label"><input type="checkbox" checked data-section="section-cards" onchange="toggleReconSection(this)"> Card Summary</label>
+            <label class="recon-toggle-label"><input type="checkbox" checked data-section="section-search" onchange="toggleReconSection(this)"> Search</label>
+            <label class="recon-toggle-label"><input type="checkbox" checked data-section="section-matched" onchange="toggleReconSection(this)"> Matched</label>
+            <label class="recon-toggle-label"><input type="checkbox" checked data-section="section-other" onchange="toggleReconSection(this)"> Unmatched Gastos</label>
+            <label class="recon-toggle-label"><input type="checkbox" checked data-section="section-cc" onchange="toggleReconSection(this)"> CC Missing</label>
+            <label class="recon-toggle-label"><input type="checkbox" checked data-section="section-movedIn" onchange="toggleReconSection(this)"> Incoming</label>
+            <label class="recon-toggle-label"><input type="checkbox" checked data-section="section-movedOut" onchange="toggleReconSection(this)"> Moved Out</label>
+            <label class="recon-toggle-label"><input type="checkbox" checked data-section="section-reviewed" onchange="toggleReconSection(this)"> Reviewed</label>
+            <label class="recon-toggle-label"><input type="checkbox" checked data-section="section-bulk" onchange="toggleReconSection(this)"> Bulk Vendors</label>
+          </div>
+        </div>
+
+        <iframe id="reconIframe" style="width:100%; border:1px solid #e2e8f0; border-radius:var(--radius-md); min-height:80vh;" src="about:blank"></iframe>
+      </div>
+
       <!-- History -->
-      <div style="margin-top:2rem;">
+      <div id="reconHistorySection" style="margin-top:2rem;">
         <h3 class="section-title"><span class="section-title-icon">&#128203;</span> Previous Reports</h3>
         <div class="table-container">
           <table class="responsive-table">
@@ -538,6 +609,897 @@
             </thead>
             <tbody id="reconHistoryBody"></tbody>
           </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Performance Reviews Tab -->
+    <div id="tab-performance" style="display:none;">
+      <!-- Submission Form -->
+      <div class="detail-panel" style="max-width:700px; margin-bottom:1.5rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="document.getElementById('perfFormBody').style.display = document.getElementById('perfFormBody').style.display === 'none' ? '' : 'none'; this.querySelector('.toggle-arrow').textContent = document.getElementById('perfFormBody').style.display === 'none' ? '\u25B6' : '\u25BC';">
+          <h2 id="perfFormTitle">Submit Performance Review</h2>
+          <span class="toggle-arrow" style="font-size:1.25rem; color:var(--brand-navy);">&#9660;</span>
+        </div>
+        <div id="perfFormBody">
+        <form id="perfForm" onsubmit="submitPerformanceReview(event)">
+          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:1rem;">
+            <div class="form-group">
+              <label for="perfEmployee">Employee</label>
+              <select id="perfEmployee" required onchange="onPerfEmployeeChange()"></select>
+              <div id="perfBohFohToggleRow" style="display:none; margin-top:0.5rem;">
+                <label style="font-size:0.75rem; color:var(--text-light);">Evaluate as:</label>
+                <select id="perfBohToggle" onchange="onPerfEmployeeChange()" style="width:auto; padding:0.25rem 0.5rem; font-size:0.8125rem;">
+                  <option value="FOH">FOH</option>
+                  <option value="BOH">BOH</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="perfYear">Year</label>
+              <select id="perfYear" required></select>
+            </div>
+            <div class="form-group">
+              <label for="perfQuarter">Quarter</label>
+              <select id="perfQuarter" required>
+                <option value="1">Q1 (Jan–Mar)</option>
+                <option value="2">Q2 (Apr–Jun)</option>
+                <option value="3">Q3 (Jul–Sep)</option>
+                <option value="4">Q4 (Oct–Dec)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="perf-scores-grid">
+            <!-- FOH: single Operations score -->
+            <div class="perf-score-row" id="perfOpsFOH">
+              <label id="perfOpsLabel">Conoce y Ejecuta la Operación <small>Operations</small></label>
+              <select id="perfOperations" onchange="updatePerfAverage()">
+                <option value="">—</option>
+                <option value="1">1 – Necesita Mejorar Urgente</option>
+                <option value="2">2 – Necesita Mejorar</option>
+                <option value="3">3 – Consistente</option>
+                <option value="4">4 – Alto Desempeño</option>
+                <option value="5">5 – Modelo a Seguir</option>
+              </select>
+            </div>
+            <!-- BOH: 7 subsections -->
+            <div id="perfOpsBOH" style="display:none;">
+              <div class="perf-score-row" style="border-left:3px solid var(--brand-navy); padding-left:0.75rem; margin-bottom:0.5rem;">
+                <label style="font-weight:700; color:var(--brand-navy);">Conoce y Ejecuta la Operación <small>BOH Subsections</small></label>
+                <div id="bohOpsAvgDisplay" style="font-size:0.875rem; color:var(--text-light);">Avg: —</div>
+              </div>
+              <div class="boh-subsections-grid">
+                <div class="perf-score-row boh-sub">
+                  <label>Primaria</label>
+                  <select id="perfBohPrimaria" onchange="updateBohOpsAvg(); updatePerfAverage()">
+                    <option value="">—</option>
+                    <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+                  </select>
+                </div>
+                <div class="perf-score-row boh-sub">
+                  <label>Secundaria</label>
+                  <select id="perfBohSecundaria" onchange="updateBohOpsAvg(); updatePerfAverage()">
+                    <option value="">—</option>
+                    <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+                  </select>
+                </div>
+                <div class="perf-score-row boh-sub">
+                  <label>Máquinas</label>
+                  <select id="perfBohMaquinas" onchange="updateBohOpsAvg(); updatePerfAverage()">
+                    <option value="">—</option>
+                    <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+                  </select>
+                </div>
+                <div class="perf-score-row boh-sub">
+                  <label>Breading</label>
+                  <select id="perfBohBreading" onchange="updateBohOpsAvg(); updatePerfAverage()">
+                    <option value="">—</option>
+                    <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+                  </select>
+                </div>
+                <div class="perf-score-row boh-sub">
+                  <label>Fileteo, Labels y Limpieza</label>
+                  <select id="perfBohFileteo" onchange="updateBohOpsAvg(); updatePerfAverage()">
+                    <option value="">—</option>
+                    <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+                  </select>
+                </div>
+                <div class="perf-score-row boh-sub">
+                  <label>Prep</label>
+                  <select id="perfBohPrep" onchange="updateBohOpsAvg(); updatePerfAverage()">
+                    <option value="">—</option>
+                    <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+                  </select>
+                </div>
+                <div class="perf-score-row boh-sub">
+                  <label>Desayuno</label>
+                  <select id="perfBohDesayuno" onchange="updateBohOpsAvg(); updatePerfAverage()">
+                    <option value="">—</option>
+                    <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div class="perf-score-row">
+              <label>Vive los Valores de CFA <small>CFA Values</small></label>
+              <select id="perfCfaValues" required onchange="updatePerfAverage()">
+                <option value="">—</option>
+                <option value="1">1 – Necesita Mejorar Urgente</option>
+                <option value="2">2 – Necesita Mejorar</option>
+                <option value="3">3 – Consistente</option>
+                <option value="4">4 – Alto Desempeño</option>
+                <option value="5">5 – Modelo a Seguir</option>
+              </select>
+            </div>
+            <div class="perf-score-row">
+              <label>Se Comunica con Claridad <small>Communication</small></label>
+              <select id="perfCommunication" required onchange="updatePerfAverage()">
+                <option value="">—</option>
+                <option value="1">1 – Necesita Mejorar Urgente</option>
+                <option value="2">2 – Necesita Mejorar</option>
+                <option value="3">3 – Consistente</option>
+                <option value="4">4 – Alto Desempeño</option>
+                <option value="5">5 – Modelo a Seguir</option>
+              </select>
+            </div>
+            <div class="perf-score-row">
+              <label id="perfGuestLabel">Obsesión por el Invitado <small>Guest Obsession</small></label>
+              <select id="perfGuestObsession" required onchange="updatePerfAverage()">
+                <option value="">—</option>
+                <option value="1">1 – Necesita Mejorar Urgente</option>
+                <option value="2">2 – Necesita Mejorar</option>
+                <option value="3">3 – Consistente</option>
+                <option value="4">4 – Alto Desempeño</option>
+                <option value="5">5 – Modelo a Seguir</option>
+              </select>
+            </div>
+            <div class="perf-score-row">
+              <label>Demuestra Responsabilidad <small>Responsibility</small></label>
+              <select id="perfResponsibility" required onchange="updatePerfAverage()">
+                <option value="">—</option>
+                <option value="1">1 – Necesita Mejorar Urgente</option>
+                <option value="2">2 – Necesita Mejorar</option>
+                <option value="3">3 – Consistente</option>
+                <option value="4">4 – Alto Desempeño</option>
+                <option value="5">5 – Modelo a Seguir</option>
+              </select>
+            </div>
+            <div class="perf-score-row">
+              <label>Protege la Cultura y Actitud Positiva <small>Culture</small></label>
+              <select id="perfCulture" required onchange="updatePerfAverage()">
+                <option value="">—</option>
+                <option value="1">1 – Necesita Mejorar Urgente</option>
+                <option value="2">2 – Necesita Mejorar</option>
+                <option value="3">3 – Consistente</option>
+                <option value="4">4 – Alto Desempeño</option>
+                <option value="5">5 – Modelo a Seguir</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-top:1rem;">
+            <div class="form-group">
+              <label>Auto Average</label>
+              <div id="perfAutoAvg" class="perf-avg-display">—</div>
+            </div>
+            <div class="form-group">
+              <label for="perfOverride">Overall Score Override <small>(optional)</small></label>
+              <input type="number" id="perfOverride" step="0.01" min="1" max="5" placeholder="Leave blank to use average">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="perfComments">Comments / Coaching</label>
+            <textarea id="perfComments" rows="3" placeholder="Coaching notes, areas of improvement, recognition..."></textarea>
+          </div>
+
+          <div style="display:flex; gap:0.75rem;">
+            <button type="submit" class="btn btn-primary" id="perfSubmitBtn">Submit Review</button>
+            <button type="button" class="btn" id="perfCancelEdit" style="display:none;" onclick="cancelPerfEdit()">Cancel Edit</button>
+          </div>
+        </form>
+        </div>
+      </div>
+
+      <!-- Rating Scale Legend -->
+      <div class="detail-panel" style="margin-bottom:1rem; padding:1rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="document.getElementById('perfScaleBody').style.display = document.getElementById('perfScaleBody').style.display === 'none' ? '' : 'none'; this.querySelector('.toggle-arrow').textContent = document.getElementById('perfScaleBody').style.display === 'none' ? '\u25B6' : '\u25BC';">
+          <h3 style="margin:0; color:var(--brand-navy); font-size:0.9375rem;">&#128203; Escala de Evaluaci&oacute;n</h3>
+          <span class="toggle-arrow" style="font-size:1rem; color:var(--brand-navy);">&#9654;</span>
+        </div>
+        <div id="perfScaleBody" style="display:none; margin-top:1rem;">
+          <div class="perf-legend-items" style="max-width:500px;">
+            <div class="perf-legend-item"><span class="perf-score-badge score-red">1</span><div><strong>Necesita Mejorar Urgente</strong><br><small>Ejecuci&oacute;n inconsistente; requiere recordatorios o correcciones frecuentes.</small></div></div>
+            <div class="perf-legend-item"><span class="perf-score-badge score-red">2</span><div><strong>Necesita Mejorar</strong><br><small>Entiende las expectativas, pero necesita coaching para aplicarlas de forma consistente.</small></div></div>
+            <div class="perf-legend-item"><span class="perf-score-badge score-yellow">3</span><div><strong>Consistente</strong><br><small>Cumple con las expectativas de manera independiente y confiable.</small></div></div>
+            <div class="perf-legend-item"><span class="perf-score-badge score-green">4</span><div><strong>Alto Desempe&ntilde;o</strong><br><small>Supera expectativas e influye positivamente en otros.</small></div></div>
+            <div class="perf-legend-item"><span class="perf-score-badge score-green">5</span><div><strong>Modelo a Seguir</strong><br><small>Establece el est&aacute;ndar; otros aprenden observando su ejemplo.</small></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Category Descriptions Accordion -->
+      <div class="detail-panel" style="margin-bottom:1.5rem; padding:1rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="document.getElementById('perfCatAccordion').style.display = document.getElementById('perfCatAccordion').style.display === 'none' ? '' : 'none'; this.querySelector('.toggle-arrow').textContent = document.getElementById('perfCatAccordion').style.display === 'none' ? '\u25B6' : '\u25BC';">
+          <h3 style="margin:0; color:var(--brand-navy); font-size:0.9375rem;">&#128214; Descripci&oacute;n de Categor&iacute;as</h3>
+          <span class="toggle-arrow" style="font-size:1rem; color:var(--brand-navy);">&#9654;</span>
+        </div>
+        <div id="perfCatAccordion" style="display:none; margin-top:1rem;">
+
+          <!-- 1. Operations -->
+          <div class="cat-accordion-item">
+            <div class="cat-accordion-header" onclick="toggleCatAccordion(this)">
+              <div><span class="cat-accordion-badge">OPS</span><strong>Conoce y Ejecuta la Operaci&oacute;n del Restaurante</strong><br><small style="color:var(--text-light);">Excelencia Operacional</small></div>
+              <span class="toggle-arrow">&#9654;</span>
+            </div>
+            <div class="cat-accordion-body">
+              <p class="cat-def"><em>Demuestra dominio y ejecuci&oacute;n consistente de los est&aacute;ndares operacionales y de marca de Chick-fil-A, anticipando y resolviendo situaciones del restaurante.</em></p>
+              <h5>Comportamientos Clave</h5>
+              <ul>
+                <li>Sigue los est&aacute;ndares corporativos de: <strong>Seguridad Alimentaria, Calidad de Alimentos, Limpieza, Eficiencia Operacional, Servicio R&aacute;pido</strong></li>
+                <li>Anticipa y resuelve problemas operacionales de manera oportuna</li>
+                <li>Usa y mantiene correctamente los equipos e instalaciones</li>
+                <li>Utiliza adecuadamente las herramientas y recursos (Pathway, Sidekick, ORG, Quality Photos, etc.)</li>
+              </ul>
+              <h5>&#11088; Modelo a Seguir</h5>
+              <ul>
+                <li>Ejecuta correctamente aun bajo presi&oacute;n</li>
+                <li>Previene problemas antes de que afecten al invitado o al equipo</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- 2. CFA Values -->
+          <div class="cat-accordion-item">
+            <div class="cat-accordion-header" onclick="toggleCatAccordion(this)">
+              <div><span class="cat-accordion-badge" style="background:#7C3AED15; color:#7C3AED;">VAL</span><strong>Aplica Consistentemente los Valores de Chick-fil-A</strong><br><small style="color:var(--text-light);">Alineaci&oacute;n con los Valores</small></div>
+              <span class="toggle-arrow">&#9654;</span>
+            </div>
+            <div class="cat-accordion-body">
+              <p class="cat-def"><em>Demuestra los cuatro valores fundamentales de Chick-fil-A a trav&eacute;s de comportamientos observables y consistentes durante cada turno.</em></p>
+              <div class="cat-values-grid">
+                <div class="cat-value-card">
+                  <h5>Here to Serve <small>(Aqu&iacute; para Servir)</small></h5>
+                  <ul>
+                    <li>Pone las necesidades del equipo y del negocio por encima de las propias</li>
+                    <li>Busca oportunidades para ayudar sin que se lo pidan</li>
+                  </ul>
+                </div>
+                <div class="cat-value-card">
+                  <h5>Better Together <small>(Mejor Juntos)</small></h5>
+                  <ul>
+                    <li>Fomenta la confianza, autenticidad y respeto mutuo</li>
+                    <li>Colabora activamente y apoya a compa&ntilde;eros en momentos de alto volumen</li>
+                  </ul>
+                </div>
+                <div class="cat-value-card">
+                  <h5>Purpose Driven <small>(Con Prop&oacute;sito)</small></h5>
+                  <ul>
+                    <li>Ejecuta cada tarea con intenci&oacute;n, sin importar su tama&ntilde;o</li>
+                    <li>Entiende c&oacute;mo su rol contribuye al &eacute;xito del restaurante</li>
+                  </ul>
+                </div>
+                <div class="cat-value-card">
+                  <h5>Pursue What's Next <small>(Buscar lo que Sigue)</small></h5>
+                  <ul>
+                    <li>Demuestra mentalidad de crecimiento con acciones concretas</li>
+                    <li>Acepta feedback y lo aplica de forma visible en su trabajo</li>
+                  </ul>
+                </div>
+              </div>
+              <h5>&#11088; Modelo a Seguir</h5>
+              <ul><li>Sus acciones inspiran a otros a vivir los valores sin necesidad de recordatorios</li></ul>
+            </div>
+          </div>
+
+          <!-- 3. Communication -->
+          <div class="cat-accordion-item">
+            <div class="cat-accordion-header" onclick="toggleCatAccordion(this)">
+              <div><span class="cat-accordion-badge" style="background:#0E749015; color:#0E7490;">COM</span><strong>Se Comunica con Claridad</strong><br><small style="color:var(--text-light);">Claridad y Composici&oacute;n</small></div>
+              <span class="toggle-arrow">&#9654;</span>
+            </div>
+            <div class="cat-accordion-body">
+              <p class="cat-def"><em>Se comunica de manera clara, respetuosa y efectiva en todas las situaciones.</em></p>
+              <h5>Comportamientos Clave</h5>
+              <ul>
+                <li>Se prepara antes de comunicar o ejecutar</li>
+                <li>Adapta su estilo y ritmo de comunicaci&oacute;n a las necesidades de otros</li>
+                <li>Utiliza herramientas y recursos para asegurar exactitud</li>
+                <li>Se expresa de forma clara, directa y respetuosa</li>
+                <li>Mantiene la calma bajo presi&oacute;n</li>
+              </ul>
+              <h5>&#11088; Modelo a Seguir</h5>
+              <ul>
+                <li>Reduce confusi&oacute;n</li>
+                <li>Genera confianza y alineaci&oacute;n en el equipo</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- 4. Guest Obsession -->
+          <div class="cat-accordion-item">
+            <div class="cat-accordion-header" onclick="toggleCatAccordion(this)">
+              <div><span class="cat-accordion-badge" style="background:#DC262615; color:#DC2626;">GST</span><strong>Obsesi&oacute;n por el Invitado</strong><br><small style="color:var(--text-light);">Excelencia en Hospitalidad</small></div>
+              <span class="toggle-arrow">&#9654;</span>
+            </div>
+            <div class="cat-accordion-body">
+              <p class="cat-def"><em>Prioriza constantemente la experiencia del invitado, anticipando necesidades y ofreciendo hospitalidad genuina en cada interacci&oacute;n.</em></p>
+              <h5>Comportamientos Clave</h5>
+              <ul>
+                <li>Trata cada interacci&oacute;n con el invitado como importante</li>
+                <li>Anticipa necesidades en lugar de esperar a que se lo pidan</li>
+                <li>Demuestra hospitalidad aut&eacute;ntica, incluso en momentos de alto volumen</li>
+                <li>Escucha activamente y responde con empat&iacute;a</li>
+                <li>Recupera el servicio de manera r&aacute;pida y apropiada cuando surge un problema</li>
+                <li>Protege la experiencia del invitado usando lenguaje positivo y profesional en &aacute;reas visibles</li>
+              </ul>
+              <h5>&#11088; Modelo a Seguir</h5>
+              <ul>
+                <li>Hace que los invitados se sientan cuidados</li>
+                <li>Convierte experiencias normales en memorables</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- 5. Responsibility -->
+          <div class="cat-accordion-item">
+            <div class="cat-accordion-header" onclick="toggleCatAccordion(this)">
+              <div><span class="cat-accordion-badge" style="background:#B4530915; color:#B45309;">RSP</span><strong>Demuestra Sentido de Pertenencia y Responsabilidad</strong><br><small style="color:var(--text-light);">Accountability</small></div>
+              <span class="toggle-arrow">&#9654;</span>
+            </div>
+            <div class="cat-accordion-body">
+              <p class="cat-def"><em>Asume responsabilidad por su desempe&ntilde;o y contribuye activamente al &eacute;xito del equipo.</em></p>
+              <h5>Comportamientos Clave</h5>
+              <ul>
+                <li>Cumple con lo que promete</li>
+                <li>Se responsabiliza por errores y aprende de ellos</li>
+                <li>Act&uacute;a pensando en el bienestar del equipo</li>
+                <li>Mantiene altos est&aacute;ndares personales</li>
+              </ul>
+              <h5>&#11088; Modelo a Seguir</h5>
+              <ul>
+                <li>Es confiable sin necesidad de supervisi&oacute;n constante</li>
+                <li>Se enfoca en soluciones, no excusas</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- 6. Culture -->
+          <div class="cat-accordion-item">
+            <div class="cat-accordion-header" onclick="toggleCatAccordion(this)">
+              <div><span class="cat-accordion-badge" style="background:#15803D15; color:#15803D;">CUL</span><strong>Protege la Cultura y Mantiene una Actitud Positiva</strong><br><small style="color:var(--text-light);">Regulaci&oacute;n Emocional y Canales de Comunicaci&oacute;n</small></div>
+              <span class="toggle-arrow">&#9654;</span>
+            </div>
+            <div class="cat-accordion-body">
+              <p class="cat-def"><em>Maneja sus emociones y frustraciones de forma madura, utilizando los canales correctos para expresar preocupaciones y protegiendo la moral del equipo.</em></p>
+              <h5>Comportamientos Clave</h5>
+              <ul>
+                <li>Regula sus emociones y no permite que la frustraci&oacute;n afecte su trato con otros</li>
+                <li>No se queja, no chismea ni ventila frustraciones con otros Team Members</li>
+                <li>Canaliza inquietudes directamente con la persona correcta: <strong>L&iacute;der de Turno &rarr; Director &rarr; Operador</strong></li>
+                <li>Identifica problemas y los reporta con propuestas de soluci&oacute;n, no solo quejas</li>
+                <li>Habla con respeto sobre l&iacute;deres, compa&ntilde;eros y el negocio, incluso cuando no est&aacute;n presentes</li>
+              </ul>
+              <div class="cat-clarification">
+                <div class="cat-no"><strong>Esto NO significa:</strong> Ignorar problemas &bull; Callarse ante situaciones injustas &bull; No dar feedback</div>
+                <div class="cat-yes"><strong>Esto S&Iacute; significa:</strong> Elegir el momento, lugar y persona correctos para expresarse de forma constructiva</div>
+              </div>
+              <h5>&#11088; Modelo a Seguir</h5>
+              <ul>
+                <li>Cuando detecta negatividad en otros, interviene de forma constructiva</li>
+                <li>Es reconocido como alguien que eleva la moral del equipo en momentos dif&iacute;ciles</li>
+              </ul>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Reviews Table -->
+      <div class="table-container">
+        <div class="toolbar">
+          <select id="perfFilterYear" onchange="loadPerformanceReviews()" style="width:auto;">
+            <option value="">All Years</option>
+          </select>
+          <select id="perfFilterQuarter" onchange="loadPerformanceReviews()" style="width:auto;">
+            <option value="">All Quarters</option>
+            <option value="1">Q1</option>
+            <option value="2">Q2</option>
+            <option value="3">Q3</option>
+            <option value="4">Q4</option>
+          </select>
+          <select id="perfFilterDept" onchange="filterPerfTable()" style="width:auto;">
+            <option value="">All Depts</option>
+            <option value="FOH">FOH</option>
+            <option value="BOH">BOH</option>
+            <option value="BOH/FOH">BOH/FOH</option>
+          </select>
+          <div style="margin-left:auto;">
+            <button class="btn btn-sm" onclick="exportPerformanceReviews()">Export Excel</button>
+          </div>
+        </div>
+        <table class="responsive-table">
+          <thead>
+            <tr>
+              <th data-psort="employee_name" class="sortable" onclick="sortPerfBy('employee_name')">Employee<span class="sort-arrow"> &#9650;</span></th>
+              <th>Dept</th>
+              <th>Period</th>
+              <th data-psort="operations" class="text-center sortable" onclick="sortPerfBy('operations')" title="Conoce y Ejecuta la Operación (Operations)">OPS<span class="sort-arrow"></span></th>
+              <th data-psort="cfa_values" class="text-center sortable" onclick="sortPerfBy('cfa_values')" title="Vive los Valores de CFA (CFA Values)">VAL<span class="sort-arrow"></span></th>
+              <th data-psort="communication" class="text-center sortable" onclick="sortPerfBy('communication')" title="Se Comunica con Claridad (Communication)">COM<span class="sort-arrow"></span></th>
+              <th data-psort="guest_obsession" class="text-center sortable" onclick="sortPerfBy('guest_obsession')" title="Obsesión por el Invitado (Guest Obsession)">GST<span class="sort-arrow"></span></th>
+              <th data-psort="responsibility" class="text-center sortable" onclick="sortPerfBy('responsibility')" title="Demuestra Responsabilidad (Responsibility)">RSP<span class="sort-arrow"></span></th>
+              <th data-psort="culture" class="text-center sortable" onclick="sortPerfBy('culture')" title="Protege la Cultura y Actitud Positiva (Culture)">CUL<span class="sort-arrow"></span></th>
+              <th data-psort="average" class="text-center sortable" onclick="sortPerfBy('average')">Avg<span class="sort-arrow"></span></th>
+              <th data-psort="overall" class="text-center sortable" onclick="sortPerfBy('overall')">Overall<span class="sort-arrow"></span></th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="perfReviewsBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- A&C Evaluations Tab -->
+    <div id="tab-ac-evals" style="display:none;">
+      <div class="detail-panel" style="margin-bottom:1.5rem;">
+        <h2 style="color:var(--brand-navy); margin-bottom:1rem;">Gap Analysis Dashboard</h2>
+        <div class="toolbar" style="margin-bottom:1rem;">
+          <div style="display:flex; gap:0.5rem;">
+            <button class="btn btn-sm ac-period-btn active" onclick="setACPeriod(7)">7 Days</button>
+            <button class="btn btn-sm ac-period-btn" onclick="setACPeriod(30)">30 Days</button>
+            <button class="btn btn-sm ac-period-btn" onclick="setACPeriod(90)">90 Days</button>
+          </div>
+          <select id="acEmpFilter" onchange="loadACEvals()" style="width:auto;">
+            <option value="">All Employees</option>
+          </select>
+          <select id="acTypeFilter" onchange="loadACEvals()" style="width:auto;">
+            <option value="">All Types</option>
+            <option value="order_taking">Order Taking</option>
+            <option value="meal_delivery">Meal Delivery</option>
+          </select>
+          <button class="btn btn-sm" onclick="exportACEvals()" style="margin-left:auto;">Export Excel</button>
+        </div>
+
+        <!-- Summary Stats -->
+        <div class="stats-grid" id="acSummaryStats" style="margin-bottom:1.5rem;"></div>
+
+        <!-- Gap Chart -->
+        <div style="position:relative; max-width:900px;">
+          <canvas id="acGapChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Trend Chart -->
+      <div class="detail-panel" style="margin-bottom:1.5rem;">
+        <h3 style="color:var(--brand-navy); margin-bottom:0.75rem;">Score Trend</h3>
+        <div style="position:relative; max-width:900px; height:300px;">
+          <canvas id="acTrendChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Recent Evaluations Table -->
+      <div class="table-container">
+        <div class="toolbar">
+          <strong style="color:var(--brand-navy);">Recent Evaluations</strong>
+        </div>
+        <div style="max-height:500px; overflow-y:auto;">
+          <table class="responsive-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Employee</th>
+                <th>Evaluator</th>
+                <th>Type</th>
+                <th>Location</th>
+                <th class="text-center">Score</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="acEvalsBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Leadership Academy Tab -->
+    <div id="tab-leadership" style="display:none;">
+      <!-- Sub-navigation -->
+      <div style="display:flex; gap:0.5rem; margin-bottom:1.5rem; flex-wrap:wrap;">
+        <button class="btn btn-sm la-sub-nav active" onclick="switchLASub('candidates')">Candidates</button>
+        <button class="btn btn-sm la-sub-nav" onclick="switchLASub('detail')" id="laDetailBtn" style="display:none;">Candidate Detail</button>
+        <button class="btn btn-sm la-sub-nav" onclick="switchLASub('resources')">Learning Resources</button>
+        <button class="btn btn-sm la-sub-nav" onclick="switchLASub('analytics')">Analytics</button>
+      </div>
+
+      <!-- Candidates Sub-section -->
+      <div id="la-sub-candidates">
+        <div class="table-container">
+          <div class="toolbar">
+            <select id="laStatusFilter" onchange="loadLACandidates()" style="width:auto;">
+              <option value="">All Status</option>
+              <option value="active" selected>Active</option>
+              <option value="on_hold">On Hold</option>
+              <option value="graduated">Graduated</option>
+              <option value="withdrawn">Withdrawn</option>
+            </select>
+            <button class="btn btn-sm btn-primary" style="margin-left:auto;" onclick="showLAEnrollModal()">+ Enroll Candidate</button>
+            <button class="btn btn-sm" onclick="exportLACandidates()">Export</button>
+          </div>
+          <table class="responsive-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Department</th>
+                <th>Tier</th>
+                <th>Status</th>
+                <th>Progress</th>
+                <th>Enrolled</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="laCandidateBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Candidate Detail Sub-section -->
+      <div id="la-sub-detail" style="display:none;">
+        <button class="btn btn-sm" onclick="switchLASub('candidates')" style="margin-bottom:1rem;">&larr; Back to Candidates</button>
+        <div id="laDetailContent"></div>
+      </div>
+
+      <!-- Learning Resources Sub-section -->
+      <div id="la-sub-resources" style="display:none;">
+        <div class="table-container">
+          <div class="toolbar">
+            <h3 style="margin:0; color:var(--brand-navy);">Learning Resources</h3>
+            <button class="btn btn-sm btn-primary" style="margin-left:auto;" onclick="showLAResourceModal()">+ Add Resource</button>
+          </div>
+          <table class="responsive-table">
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Author</th>
+                <th>Type</th>
+                <th>Tier</th>
+                <th>Required</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="laResourceBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Analytics Sub-section -->
+      <div id="la-sub-analytics" style="display:none;">
+        <div id="laAnalyticsContent"></div>
+      </div>
+    </div>
+
+    <!-- Enroll Candidate Modal -->
+    <div id="laEnrollModal" class="modal-overlay hidden">
+      <div class="modal" style="max-width:400px;">
+        <h2>Enroll Candidate</h2>
+        <form onsubmit="submitLAEnroll(event)">
+          <div class="form-group">
+            <label>Department</label>
+            <select id="laEnrollDept" onchange="filterLAEnrollList()" style="font-size:16px;">
+              <option value="">All Departments</option>
+              <option value="FOH">FOH</option>
+              <option value="BOH">BOH</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Employee</label>
+            <input type="text" id="laEnrollSearch" placeholder="Search by name..." oninput="filterLAEnrollList()" style="font-size:16px; margin-bottom:0.5rem;">
+            <select id="laEnrollEmployee" required size="6" style="font-size:16px; width:100%; height:auto;">
+              <option value="">Select employee...</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Level</label>
+            <select id="laEnrollLevel" required>
+              <option value="1">Phase 1 — A Servant's Heart</option>
+              <option value="2">Phase 2 — Emerging Servant Leader</option>
+              <option value="3">Phase 3 — Business Leader</option>
+              <option value="4">Phase 4 — Senior Leader</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Target Date</label>
+            <input type="date" id="laEnrollTarget">
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn" onclick="document.getElementById('laEnrollModal').classList.add('hidden')">Cancel</button>
+            <button type="submit" class="btn btn-primary">Enroll</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Add/Edit Resource Modal -->
+    <div id="laResourceModal" class="modal-overlay hidden">
+      <div class="modal" style="max-width:500px;">
+        <h2 id="laResourceModalTitle">Add Resource</h2>
+        <form onsubmit="submitLAResource(event)">
+          <input type="hidden" id="laResEditId">
+          <div class="form-group">
+            <label>Title</label>
+            <input type="text" id="laResTitle" required>
+          </div>
+          <div class="form-group">
+            <label>Author</label>
+            <input type="text" id="laResAuthor">
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+            <div class="form-group">
+              <label>Type</label>
+              <select id="laResType" required>
+                <option value="book">Book</option>
+                <option value="video">Video</option>
+                <option value="podcast">Podcast</option>
+                <option value="ted_talk">TED Talk</option>
+                <option value="article">Article</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Tier</label>
+              <select id="laResTier" required>
+                <option value="1">Tier 1 — Foundations</option>
+                <option value="2">Tier 2 — Emerging Leaders</option>
+                <option value="3">Tier 3 — Senior Director</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>URL (YouTube link, podcast link, etc.)</label>
+            <input type="url" id="laResUrl" placeholder="https://...">
+          </div>
+          <div class="form-group">
+            <label>Description</label>
+            <textarea id="laResDesc" rows="2"></textarea>
+          </div>
+          <div class="form-group">
+            <label>Thought Leader</label>
+            <input type="text" id="laResLeader" placeholder="e.g. Sinek, Maxwell, Groeschel">
+          </div>
+          <div class="form-group">
+            <label><input type="checkbox" id="laResRequired"> Required</label>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn" onclick="document.getElementById('laResourceModal').classList.add('hidden')">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Executive Scorecard Tab -->
+    <div id="tab-scorecard" style="display:none;">
+      <!-- Period Selector & Month Picker -->
+      <div class="detail-panel" style="margin-bottom:1.5rem;">
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem;">
+          <h2 style="color:var(--brand-navy); margin:0; font-size:1.35rem;">Executive Scorecard</h2>
+          <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+            <div style="display:flex; gap:0.35rem;">
+              <button class="btn sc-period-btn active" style="font-size:0.875rem; padding:0.45rem 0.9rem;" onclick="setSCPeriod('monthly', this)">Mensual</button>
+              <button class="btn sc-period-btn" style="font-size:0.875rem; padding:0.45rem 0.9rem;" onclick="setSCPeriod('90d', this)">90 Días</button>
+              <button class="btn sc-period-btn" style="font-size:0.875rem; padding:0.45rem 0.9rem;" onclick="setSCPeriod('6m', this)">6 Meses</button>
+              <button class="btn sc-period-btn" style="font-size:0.875rem; padding:0.45rem 0.9rem;" onclick="setSCPeriod('year', this)">Anual</button>
+            </div>
+            <input type="month" id="scMonthPicker" onchange="loadScorecard()" style="padding:0.45rem 0.75rem; border:1px solid var(--border); border-radius:var(--radius-sm); font-size:0.9375rem; font-family:inherit;">
+            <button class="btn" style="font-size:0.875rem; padding:0.45rem 0.9rem;" onclick="showSCDataEntry()" title="Ingresar datos">&#9998; Ingresar Datos</button>
+            <button class="btn" style="font-size:0.875rem; padding:0.45rem 0.9rem;" onclick="showSCBulkUpload()" title="Carga masiva">&#128228; Carga Masiva</button>
+            <button class="btn" style="font-size:0.875rem; padding:0.45rem 0.9rem;" onclick="scAutoCollect()" title="Auto-fetch Google Reviews, Facebook &amp; Instagram" id="scAutoCollectBtn">&#9889; Auto-Collect</button>
+            <button class="btn" style="font-size:0.875rem; padding:0.45rem 0.9rem;" onclick="exportScorecardPDF()" title="Exportar PDF">&#128196; Export PDF</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 1: Operational Excellence & Second Mile Service -->
+      <div class="detail-panel" style="margin-bottom:1.5rem;">
+        <h3 style="color:var(--brand-navy); margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem;">
+          <span style="font-size:1.3rem;">&#127942;</span> Hospitality & Second Mile Service
+        </h3>
+        <!-- OSAT General Card + YTD Trend Chart side by side -->
+        <div style="display:flex; gap:1.5rem; align-items:stretch; margin-bottom:1.5rem; flex-wrap:wrap;">
+          <div id="scOsatGeneralSlot" style="flex:0 0 220px; display:flex;"></div>
+          <div style="flex:1; min-width:300px; position:relative; height:280px;">
+            <canvas id="scOsatTrendChart"></canvas>
+          </div>
+        </div>
+        <div class="sc-section" id="scSection1">
+          <p style="color:var(--text-light); text-align:center; padding:2rem;">Cargando datos...</p>
+        </div>
+      </div>
+
+      <!-- Section 2: Sales & Growth -->
+      <div class="detail-panel" style="margin-bottom:1.5rem;">
+        <h3 style="color:var(--brand-navy); margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem;">
+          <span style="font-size:1.3rem;">&#128176;</span> Ventas y Crecimiento
+        </h3>
+        <!-- Sales Total Card + Trend Chart side by side -->
+        <div id="scSalesHeader" style="display:flex; gap:1.5rem; align-items:stretch; margin-bottom:1.5rem; flex-wrap:wrap;">
+          <div id="scSalesTotalSlot" style="flex:0 0 220px; display:flex;"></div>
+          <div id="scSalesChartWrap" style="flex:1; min-width:0; position:relative; height:320px;">
+            <canvas id="scSalesTrendChart"></canvas>
+          </div>
+        </div>
+        <div class="sc-section" id="scSection2">
+          <p style="color:var(--text-light); text-align:center; padding:2rem;">Cargando datos...</p>
+        </div>
+      </div>
+
+      <!-- Section 3: Quality & Brand Standards -->
+      <div class="detail-panel" style="margin-bottom:1.5rem;">
+        <h3 style="color:var(--brand-navy); margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem;">
+          <span style="font-size:1.3rem;">&#9989;</span> Excelencia Operacional
+        </h3>
+        <div class="sc-section" id="scSection3">
+          <p style="color:var(--text-light); text-align:center; padding:2rem;">Cargando datos...</p>
+        </div>
+        <div style="margin-top:1rem;">
+          <h4 style="color:var(--brand-navy); font-size:0.875rem; margin-bottom:0.5rem;">&#127950; Speed of Service (SOS) Trend</h4>
+          <div style="position:relative; width:100%; height:280px;">
+            <canvas id="scSosTrendChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 4: Community -->
+      <div class="detail-panel" style="margin-bottom:1.5rem;">
+        <h3 style="color:var(--brand-navy); margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem;">
+          <span style="font-size:1.3rem;">&#128227;</span> Comunidad
+        </h3>
+        <div class="sc-section" id="scSection4">
+          <p style="color:var(--text-light); text-align:center; padding:2rem;">Cargando datos...</p>
+        </div>
+      </div>
+
+      <!-- Data Entry Modal -->
+      <div id="scEntryModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:1000; overflow-y:auto;">
+        <div style="max-width:800px; margin:2rem auto; background:white; border-radius:var(--radius-lg); padding:2rem; position:relative;">
+          <button onclick="closeSCModal()" style="position:absolute; top:1rem; right:1rem; background:none; border:none; font-size:1.5rem; cursor:pointer;">&times;</button>
+          <h2 style="color:var(--brand-navy); margin-bottom:1rem;">Ingresar Datos Mensuales</h2>
+          <div style="margin-bottom:1rem;">
+            <label><strong>Mes:</strong></label>
+            <input type="month" id="scEntryMonth" onchange="reloadSCEntryData()" style="padding:0.4rem 0.6rem; border:1px solid var(--border); border-radius:var(--radius-sm);">
+          </div>
+          <form id="scEntryForm" onsubmit="saveSCData(event)">
+            <div id="scEntryFields"></div>
+            <div style="margin-top:1.5rem; display:flex; gap:0.75rem;">
+              <button type="submit" class="btn btn-primary">Guardar</button>
+              <button type="button" class="btn" onclick="closeSCModal()">Cancelar</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Bulk Upload Modal -->
+      <div id="scBulkModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:1000; overflow-y:auto;">
+        <div style="max-width:700px; margin:2rem auto; background:white; border-radius:var(--radius-lg); padding:2rem; position:relative;">
+          <button onclick="closeSCBulkModal()" style="position:absolute; top:1rem; right:1rem; background:none; border:none; font-size:1.5rem; cursor:pointer;">&times;</button>
+          <h2 style="color:var(--brand-navy); margin-bottom:1rem;">Carga Masiva de Datos</h2>
+          <p style="color:var(--text-light); margin-bottom:1rem;">Sube un archivo CSV con columnas: <code>month, metric_key, metric_value</code></p>
+          <p style="color:var(--text-light); margin-bottom:0.5rem; font-size:0.85rem;">Ejemplo:</p>
+          <pre style="background:var(--bg-alt, #f8f9fa); padding:1rem; border-radius:8px; font-size:0.8rem; overflow-x:auto; margin-bottom:1rem;">month,metric_key,metric_value
+2025-01,sales_total,98617.84
+2025-01,sales_drive_thru,60583.32
+2025-01,osat_overall,0.88
+2025-01,avg_check,16.04</pre>
+          <div style="margin-bottom:1rem;">
+            <strong>Métricas válidas:</strong>
+            <div id="scValidKeys" style="font-size:0.8rem; color:var(--text-light); margin-top:0.25rem; max-height:120px; overflow-y:auto;"></div>
+          </div>
+          <input type="file" id="scBulkFile" accept=".csv" style="margin-bottom:1rem;">
+          <div style="display:flex; gap:0.75rem;">
+            <button class="btn btn-primary" onclick="processSCBulkUpload()">Importar</button>
+            <button class="btn" onclick="closeSCBulkModal()">Cancelar</button>
+          </div>
+          <div id="scBulkResult" style="margin-top:1rem;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Social Posts Tab -->
+    <div id="tab-social-posts" style="display:none;">
+      <div class="table-container">
+        <div class="toolbar" style="display:flex; align-items:center; gap:1rem; flex-wrap:wrap;">
+          <h2 style="margin:0; color:var(--brand-navy); font-size:1.25rem;">&#128247; Social Media Posts</h2>
+          <div style="margin-left:auto; display:flex; gap:0.5rem;">
+            <button class="btn btn-primary btn-sm" onclick="spShowCreate(true)">+ Nuevo Post</button>
+            <button class="btn btn-sm" onclick="spShowHistory()">Historial</button>
+          </div>
+        </div>
+
+        <!-- Create Panel -->
+        <div id="spCreatePanel" style="padding:1.5rem;">
+          <form id="spForm" onsubmit="event.preventDefault(); spGenerate();">
+            <!-- Row 1: Type + Format -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
+              <div>
+                <label style="font-size:0.8rem; font-weight:600; color:var(--brand-navy); display:block; margin-bottom:0.3rem;">Tipo de Post</label>
+                <select id="spPostType" style="width:100%; padding:0.5rem; border:1px solid var(--border); border-radius:6px; font-size:0.9rem;">
+                  <option value="weekly-special">Especial de la Semana</option>
+                  <option value="lto">Oferta por Tiempo Limitado</option>
+                  <option value="community-event">Evento Comunitario</option>
+                  <option value="seasonal">Temporada / Fecha Especial</option>
+                  <option value="brand-moment">Momento de Marca</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size:0.8rem; font-weight:600; color:var(--brand-navy); display:block; margin-bottom:0.3rem;">Formato</label>
+                <select id="spIGFormat" style="width:100%; padding:0.5rem; border:1px solid var(--border); border-radius:6px; font-size:0.9rem;">
+                  <option value="ig-square">1:1 Cuadrado (1080×1080)</option>
+                  <option value="ig-portrait">4:5 Vertical (1080×1350)</option>
+                </select>
+              </div>
+            </div>
+            <!-- Main description — drives everything -->
+            <div style="margin-bottom:1rem;">
+              <label style="font-size:0.8rem; font-weight:600; color:var(--brand-navy); display:block; margin-bottom:0.3rem;">Describe tu post *</label>
+              <textarea id="spContext" rows="4" required placeholder="Ej: Nuevo Strawberry Hibiscus Lemonade, disponible por tiempo limitado. Limonada con fresas frescas e hibisco, refrescante y tropical. Precio $4.99..." style="width:100%; padding:0.6rem; border:1px solid var(--border); border-radius:8px; font-size:0.95rem; resize:vertical; box-sizing:border-box; line-height:1.5;"></textarea>
+              <div style="font-size:0.7rem; color:var(--text-light); margin-top:3px;">Describe el producto, evento o promoción. Claude generará la imagen, copy, y layout automáticamente.</div>
+            </div>
+            <!-- Optional: upload your own photo instead -->
+            <div style="margin-bottom:1rem; padding:0.75rem; background:var(--bg-alt); border-radius:8px; border:1px solid var(--border);">
+              <div style="display:flex; align-items:center; gap:0.75rem;">
+                <span style="font-size:0.8rem; color:var(--text-light);">📷 ¿Tienes tu propia foto?</span>
+                <input type="file" id="spPhotoFile" accept="image/jpeg,image/png,image/webp" onchange="spUploadPhoto()" style="font-size:0.8rem;">
+              </div>
+              <div id="spPhotoPreview" style="margin-top:0.5rem;"></div>
+            </div>
+            <!-- Reference Design Picker -->
+            <div style="margin-bottom:1rem; padding:0.75rem; background:#f3e8ff; border-radius:8px; border:1px solid #d4b8ff;">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.5rem;">
+                <span style="font-size:0.8rem; font-weight:600; color:#6b21a8;">🎨 Diseño de Referencia</span>
+                <label style="cursor:pointer; font-size:0.75rem; color:#7c4dff; text-decoration:underline;">
+                  <input type="file" id="spRefUpload" accept="image/jpeg,image/png,image/webp" onchange="spUploadRefDesign()" style="display:none;">
+                  + Subir nuevo
+                </label>
+              </div>
+              <div id="spRefDesignGrid" style="display:flex; gap:0.5rem; flex-wrap:wrap; min-height:40px;">
+                <span style="font-size:0.75rem; color:var(--text-light);">Cargando...</span>
+              </div>
+              <input type="hidden" id="spSelectedRef" value="">
+              <div style="font-size:0.65rem; color:var(--text-light); margin-top:4px;">Selecciona un ejemplo para que AI copie el estilo visual. Si no seleccionas ninguno, se usará uno al azar.</div>
+            </div>
+            <!-- Hidden fields to maintain compatibility -->
+            <input type="hidden" id="spHeadline" value="">
+            <input type="hidden" id="spKeyDetail" value="">
+            <input type="hidden" id="spTone" value="default">
+            <input type="hidden" id="spAIImagePrompt" value="">
+            <select id="spCTA" style="display:none;"><option value="">Automático</option></select>
+            <input type="hidden" id="spCustomCTAInput" value="">
+            <div id="spCustomCTA" style="display:none;"></div>
+            <!-- Generate button -->
+            <div style="display:flex; justify-content:flex-end; margin-top:0.5rem;">
+              <button type="submit" class="btn btn-primary" id="spGenerateBtn" style="padding:0.6rem 2rem; font-size:1rem;">
+                Generar Post con AI
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Preview Panel -->
+        <div id="spPreviewPanel" style="display:none; padding:1.5rem;">
+          <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1rem;">
+            <button class="btn btn-sm" onclick="spShowCreate()">&larr; Volver al formulario</button>
+            <h3 style="margin:0; color:var(--brand-navy);">Vista Previa</h3>
+          </div>
+          <div id="spPreviewContent"></div>
+        </div>
+
+        <!-- History Panel -->
+        <div id="spHistoryPanel" style="display:none; padding:1.5rem;">
+          <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1rem;">
+            <button class="btn btn-sm" onclick="spShowCreate(true)">&larr; Crear Nuevo</button>
+            <h3 style="margin:0; color:var(--brand-navy);">Historial de Posts</h3>
+          </div>
+          <div id="spHistoryList"></div>
         </div>
       </div>
     </div>
@@ -635,6 +1597,26 @@
           <input type="text" id="editName" disabled>
         </div>
         <div class="form-group">
+          <label for="editRole">Role</label>
+          <select id="editRole">
+            <option value="Team Member">Team Member</option>
+            <option value="Senior Team Member">Senior Team Member</option>
+            <option value="Trainer">Trainer</option>
+            <option value="Shift Leader">Shift Leader</option>
+            <option value="Director">Director</option>
+            <option value="Senior Director">Senior Director</option>
+            <option value="Administrator">Administrator</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="editDept">Department</label>
+          <select id="editDept">
+            <option value="FOH">FOH — Front of House</option>
+            <option value="BOH">BOH — Back of House</option>
+            <option value="BOH/FOH">BOH/FOH — Both</option>
+          </select>
+        </div>
+        <div class="form-group">
           <label for="editType">Employee Type</label>
           <select id="editType">
             <option value="hourly">Hourly</option>
@@ -655,6 +1637,11 @@
         <div class="form-group">
           <label for="editSlackId">Slack User ID <small style="color:var(--text-light);">(for DM notifications)</small></label>
           <input type="text" id="editSlackId" placeholder="e.g. U07ABC123">
+        </div>
+        <div id="editSetupSection" class="form-group" style="display:none; padding:0.75rem; background:#FEF3C7; border:1px solid #F59E0B; border-radius:8px;">
+          <label style="color:#92400E; font-weight:700;">⚠️ Portal Setup Required</label>
+          <label for="editPin">POS PIN <small style="color:var(--text-light);">(creates portal account + sends Slack welcome DM)</small></label>
+          <input type="text" id="editPin" placeholder="e.g. 123456" pattern="[0-9]{4,8}" title="4-8 digit PIN">
         </div>
         <div class="modal-actions">
           <button type="button" class="btn" onclick="closeEdit()">Cancel</button>
@@ -678,6 +1665,26 @@
           <input type="text" id="addLastName" required>
         </div>
         <div class="form-group">
+          <label for="addRole">Role</label>
+          <select id="addRole">
+            <option value="Team Member">Team Member</option>
+            <option value="Senior Team Member">Senior Team Member</option>
+            <option value="Trainer">Trainer</option>
+            <option value="Shift Leader">Shift Leader</option>
+            <option value="Director">Director</option>
+            <option value="Senior Director">Senior Director</option>
+            <option value="Administrator">Administrator</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="addDept">Department</label>
+          <select id="addDept">
+            <option value="FOH">FOH — Front of House</option>
+            <option value="BOH">BOH — Back of House</option>
+            <option value="BOH/FOH">BOH/FOH — Both</option>
+          </select>
+        </div>
+        <div class="form-group">
           <label for="addType">Employee Type</label>
           <select id="addType">
             <option value="exempt">Exempt</option>
@@ -688,6 +1695,14 @@
           <label for="addStartDate">Start Date</label>
           <input type="date" id="addStartDate" required>
         </div>
+        <div class="form-group">
+          <label for="addPin">POS PIN <small style="color:var(--text-light);">(used as login username &amp; temp password)</small></label>
+          <input type="text" id="addPin" placeholder="e.g. 123456" pattern="[0-9]{4,8}" title="4-8 digit PIN" required>
+        </div>
+        <div class="form-group">
+          <label for="addSlackId">Slack User ID <small style="color:var(--text-light);">(optional — for welcome DM)</small></label>
+          <input type="text" id="addSlackId" placeholder="e.g. U07ABC123">
+        </div>
         <div class="modal-actions">
           <button type="button" class="btn" onclick="closeAddEmployee()">Cancel</button>
           <button type="submit" class="btn btn-primary">Add Employee</button>
@@ -695,6 +1710,306 @@
       </form>
     </div>
   </div>
+
+    <!-- Gastos Tab -->
+    <div id="tab-gastos" style="display:none;">
+      <div class="table-container">
+        <div class="toolbar" style="display:flex; align-items:center; gap:1rem; flex-wrap:wrap;">
+          <h2 style="margin:0; color:var(--brand-navy); font-size:1.25rem;">&#128176; Gastos — Invoice Management</h2>
+          <div style="margin-left:auto; display:flex; gap:0.5rem; align-items:center;">
+            <select id="gastosStatusFilter" onchange="gastosLoadInvoices()" style="padding:0.4rem 0.6rem; border:1px solid var(--border); border-radius:6px; font-size:0.85rem;">
+              <option value="">All Status</option>
+              <option value="draft">Draft</option>
+              <option value="ready">Ready for Inc.</option>
+              <option value="submitted">Submitted</option>
+              <option value="verified">Verified</option>
+              <option value="error">Error</option>
+            </select>
+            <select id="gastosMonthFilter" onchange="gastosLoadInvoices()" style="padding:0.4rem 0.6rem; border:1px solid var(--border); border-radius:6px; font-size:0.85rem;">
+              <option value="">All Months</option>
+            </select>
+            <button class="btn btn-primary btn-sm" onclick="gastosShowUpload()">&#128228; Upload Invoice</button>
+            <button class="btn btn-sm" onclick="gastosShowManual()">+ Manual Entry</button>
+            <button class="btn btn-sm" onclick="gastosShowBookmarklet()">&#128279; Bookmarklet</button>
+            <button class="btn btn-sm" onclick="gastosExport()">&#128229; Export CSV</button>
+            <button class="btn btn-sm" onclick="gastosExportReceipts()" title="Export Receipts as PDF">&#128206; Export Receipts PDF</button>
+          </div>
+        </div>
+
+        <!-- Stats Row -->
+        <div id="gastosStats" style="display:grid; grid-template-columns:repeat(5,1fr); gap:0.75rem; padding:1rem 1.5rem; background:#f8f9fa; border-bottom:1px solid var(--border);">
+          <div style="text-align:center;">
+            <div style="font-size:1.5rem; font-weight:700; color:var(--brand-navy);" id="gStatDraft">0</div>
+            <div style="font-size:0.75rem; color:#666;">Drafts</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:1.5rem; font-weight:700; color:#e67e22;" id="gStatReady">0</div>
+            <div style="font-size:0.75rem; color:#666;">Ready</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:1.5rem; font-weight:700; color:#27ae60;" id="gStatSubmitted">0</div>
+            <div style="font-size:0.75rem; color:#666;">Submitted</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:1.5rem; font-weight:700; color:#2ecc71;" id="gStatVerified">0</div>
+            <div style="font-size:0.75rem; color:#666;">Verified</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:1.5rem; font-weight:700; color:var(--brand-red);" id="gStatTotal">$0</div>
+            <div style="font-size:0.75rem; color:#666;">Total (Month)</div>
+          </div>
+        </div>
+
+        <!-- Invoice Table -->
+        <div style="overflow-x:auto;">
+          <table class="data-table" id="gastosTable">
+            <thead>
+              <tr>
+                <th>Status</th>
+                <th>Supplier</th>
+                <th>Invoice #</th>
+                <th>Date</th>
+                <th>Lines</th>
+                <th>Total</th>
+                <th>Payment ID</th>
+                <th>Created</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="gastosTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- APPRENTICESHIP TAB -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <div id="tab-apprenticeship" style="display:none;">
+      <!-- Sub-tab navigation -->
+      <div style="display:flex; gap:0.5rem; padding:0.75rem 1.5rem; background:#f8f9fa; border-bottom:1px solid var(--border); flex-wrap:wrap; align-items:center;">
+        <button class="btn btn-sm appr-sub-btn active" data-appr-sub="appr-dashboard" onclick="apprSwitchSub('appr-dashboard')">&#128202; Dashboard</button>
+        <button class="btn btn-sm appr-sub-btn" data-appr-sub="appr-detail" onclick="apprSwitchSub('appr-detail')">&#128196; Enrollment Detail</button>
+        <button class="btn btn-sm appr-sub-btn" data-appr-sub="appr-timesheet" onclick="apprSwitchSub('appr-timesheet')">&#128228; Timesheet Import</button>
+        <button class="btn btn-sm appr-sub-btn" data-appr-sub="appr-compliance" onclick="apprSwitchSub('appr-compliance')">&#9888;&#65039; Compliance</button>
+        <div style="margin-left:auto; display:flex; gap:0.5rem;">
+          <button class="btn btn-sm" onclick="apprExportRAPIDS()">&#128229; RAPIDS Export</button>
+          <button class="btn btn-sm btn-primary" onclick="apprShowNewEnrollment()">+ New Enrollment</button>
+        </div>
+      </div>
+
+      <!-- Sub-tab: Dashboard -->
+      <div id="appr-dashboard" class="appr-sub-tab">
+        <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:0.75rem; padding:1rem 1.5rem; background:#f8f9fa; border-bottom:1px solid var(--border);">
+          <div style="text-align:center;">
+            <div style="font-size:1.5rem; font-weight:700; color:var(--brand-navy);" id="apprStatActive">0</div>
+            <div style="font-size:0.75rem; color:#666;">Active Apprentices</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:1.5rem; font-weight:700; color:#27ae60;" id="apprStatCompleted">0</div>
+            <div style="font-size:0.75rem; color:#666;">Completed</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:1.5rem; font-weight:700; color:var(--brand-red);" id="apprStatOverdue">0</div>
+            <div style="font-size:0.75rem; color:#666;">Overdue Events</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:1.5rem; font-weight:700; color:#f39c12;" id="apprStatUpcoming">0</div>
+            <div style="font-size:0.75rem; color:#666;">Upcoming (30d)</div>
+          </div>
+        </div>
+        <div id="apprDashContent" class="table-container">
+          <div style="overflow-x:auto;">
+            <table class="data-table">
+              <thead><tr>
+                <th>Apprentice</th><th>Track</th><th>Status</th><th>Start</th><th>OJL Progress</th><th>RI Progress</th><th>End Date</th><th>Actions</th>
+              </tr></thead>
+              <tbody id="apprEnrollBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sub-tab: Enrollment Detail -->
+      <div id="appr-detail" class="appr-sub-tab" style="display:none;">
+        <div id="apprDetailContent" style="padding:1.5rem;">
+          <p style="color:#999; text-align:center; padding:2rem;">Select an enrollment from the Dashboard to view details.</p>
+        </div>
+      </div>
+
+      <!-- Sub-tab: Timesheet Import -->
+      <div id="appr-timesheet" class="appr-sub-tab" style="display:none;">
+        <div style="padding:1.5rem; max-width:700px;">
+          <h3 style="color:var(--brand-navy); margin-bottom:1rem;">&#128228; Import Timesheet (OJL Hours)</h3>
+          <p style="font-size:0.85rem; color:#666; margin-bottom:1.5rem;">Upload a PDF timesheet. AI will extract the period dates and total hours automatically.</p>
+          <form id="apprTimesheetForm" onsubmit="event.preventDefault(); apprUploadTimesheet();">
+            <div class="form-group">
+              <label>Enrollment *</label>
+              <select id="apprTimesheetEnrollmentId" required style="width:100%; padding:0.5rem; border:1px solid var(--border); border-radius:6px;">
+                <option value="">Select enrollment...</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Timesheet File (PDF) *</label>
+              <input type="file" id="apprTimesheetFile" accept=".pdf,application/pdf" required style="padding:0.5rem;">
+            </div>
+            <button type="submit" class="btn btn-primary" id="apprTimesheetBtn">Upload &amp; Process</button>
+          </form>
+          <div id="apprOCRResult" style="display:none;"></div>
+        </div>
+      </div>
+
+      <!-- Sub-tab: Compliance -->
+      <div id="appr-compliance" class="appr-sub-tab" style="display:none;">
+        <div id="apprComplianceContent" style="padding:1.5rem;">
+          <p style="color:#999; text-align:center; padding:2rem;">Loading compliance data...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Apprenticeship Modal (reusable) -->
+    <div id="apprNewModal" class="modal-overlay hidden"></div>
+
+    <!-- Gastos Upload Modal -->
+    <div id="gastosUploadModal" class="modal-overlay hidden">
+      <div class="modal" style="max-width:700px;">
+        <h2>&#128228; Upload Invoice</h2>
+        <p style="font-size:0.85rem; color:#666; margin-bottom:1rem;">Upload a photo or PDF of an invoice. AI will extract the data automatically.</p>
+        <form id="gastosUploadForm" onsubmit="event.preventDefault(); gastosUploadInvoice();">
+          <div class="form-group">
+            <label for="gastosFile">Invoice File (JPG, PNG, PDF)</label>
+            <input type="file" id="gastosFile" accept="image/*,.pdf" required multiple style="padding:0.5rem;">
+          </div>
+          <div id="gastosUploadProgress" style="display:none; padding:1rem; text-align:center;">
+            <div style="font-size:1.2rem; margin-bottom:0.5rem;">&#129302; Analyzing invoice...</div>
+            <div style="font-size:0.85rem; color:#666;">Claude Vision is reading the document</div>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn" onclick="gastosCloseUpload()">Cancel</button>
+            <button type="submit" class="btn btn-primary" id="gastosUploadBtn">Upload & Analyze</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Gastos OCR Review Modal -->
+    <div id="gastosReviewModal" class="modal-overlay hidden">
+      <div class="modal" style="max-width:850px; max-height:90vh; overflow-y:auto;">
+        <h2>&#9989; Review Extracted Data</h2>
+        <p style="font-size:0.85rem; color:#666; margin-bottom:1rem;">AI extracted the following. Please review and correct before saving.</p>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
+          <div class="form-group">
+            <label>Supplier</label>
+            <select id="gastosReviewSupplier" style="width:100%; padding:0.5rem; border:1px solid var(--border); border-radius:6px;"></select>
+          </div>
+          <div class="form-group">
+            <label>Invoice Number</label>
+            <input type="text" id="gastosReviewInvNum" style="width:100%;">
+          </div>
+          <div class="form-group">
+            <label>Invoice Date</label>
+            <input type="date" id="gastosReviewInvDate" style="width:100%;">
+          </div>
+          <div class="form-group">
+            <label>Payment Month</label>
+            <input type="month" id="gastosReviewPeriod" style="width:100%;">
+          </div>
+        </div>
+        <h3 style="font-size:1rem; color:var(--brand-navy); margin-bottom:0.5rem;">Line Items</h3>
+        <div id="gastosReviewLines" style="margin-bottom:1rem;"></div>
+        <button type="button" class="btn btn-sm" onclick="gastosAddReviewLine()" style="margin-bottom:1rem;">+ Add Line</button>
+        <div style="text-align:right; font-size:1.1rem; font-weight:700; color:var(--brand-navy); margin-bottom:1rem;">
+          Total: $<span id="gastosReviewTotal">0.00</span>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn" onclick="gastosCloseReview()">Cancel</button>
+          <button type="button" class="btn btn-primary" onclick="gastosSaveReview()">Save Invoice</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gastos Manual Entry Modal -->
+    <div id="gastosManualModal" class="modal-overlay hidden">
+      <div class="modal" style="max-width:750px; max-height:90vh; overflow-y:auto;">
+        <h2>&#128221; Manual Invoice Entry</h2>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
+          <div class="form-group">
+            <label>Supplier</label>
+            <select id="gastosManualSupplier" style="width:100%; padding:0.5rem; border:1px solid var(--border); border-radius:6px;"></select>
+          </div>
+          <div class="form-group">
+            <label>Invoice Number</label>
+            <input type="text" id="gastosManualInvNum" required style="width:100%;">
+          </div>
+          <div class="form-group">
+            <label>Invoice Date</label>
+            <input type="date" id="gastosManualInvDate" required style="width:100%;">
+          </div>
+          <div class="form-group">
+            <label>Payment Date</label>
+            <input type="date" id="gastosManualPayDate" style="width:100%;">
+          </div>
+          <div class="form-group">
+            <label>Business Period</label>
+            <input type="month" id="gastosManualPeriod" style="width:100%;">
+          </div>
+          <div class="form-group">
+            <label>Currency</label>
+            <select id="gastosManualCurrency" style="width:100%; padding:0.5rem; border:1px solid var(--border); border-radius:6px;">
+              <option value="USD">USD</option>
+            </select>
+          </div>
+        </div>
+        <h3 style="font-size:1rem; color:var(--brand-navy); margin-bottom:0.5rem;">Line Items</h3>
+        <div id="gastosManualLines"></div>
+        <button type="button" class="btn btn-sm" onclick="gastosAddManualLine()" style="margin-bottom:1rem;">+ Add Line</button>
+        <div style="text-align:right; font-size:1.1rem; font-weight:700; color:var(--brand-navy); margin-bottom:1rem;">
+          Total: $<span id="gastosManualTotal">0.00</span>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn" onclick="gastosCloseManual()">Cancel</button>
+          <button type="button" class="btn btn-primary" onclick="gastosSaveManual()">Save Invoice</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gastos Detail Modal -->
+    <div id="gastosDetailModal" class="modal-overlay hidden">
+      <div class="modal" style="max-width:800px; max-height:90vh; overflow-y:auto;">
+        <h2 id="gastosDetailTitle">Invoice Details</h2>
+        <div id="gastosDetailContent"></div>
+        <div class="modal-actions">
+          <button type="button" class="btn" onclick="gastosCloseDetail()">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gastos Bookmarklet Modal -->
+    <div id="gastosBookmarkletModal" class="modal-overlay hidden">
+      <div class="modal" style="max-width:650px;">
+        <h2>&#128279; Inc. Auto-Filler Bookmarklet</h2>
+        <p style="font-size:0.85rem; color:#666; margin-bottom:1rem;">Drag the button below to your bookmarks bar. When you're on the Inc. expense website, click it to auto-fill invoice data from Gastos.</p>
+        <div style="text-align:center; padding:2rem; background:#f0f4f8; border-radius:12px; margin-bottom:1rem;">
+          <a id="gastosBookmarkletLink" href="#" style="display:inline-block; padding:12px 24px; background:var(--brand-red); color:white; font-weight:700; border-radius:8px; text-decoration:none; font-size:1rem; cursor:grab;" draggable="true">&#128176; Fill from Gastos</a>
+          <p style="font-size:0.8rem; color:#999; margin-top:0.75rem;">Drag this to your bookmarks bar</p>
+        </div>
+        <div style="background:#fffdf0; border:1px solid #f0e6b2; border-radius:8px; padding:1rem; font-size:0.85rem;">
+          <strong>How to use:</strong>
+          <ol style="margin:0.5rem 0 0 1.2rem; padding:0;">
+            <li>Go to <code>backoffice.cfahome.com</code> and log in</li>
+            <li>Select the correct Supplier and Month on Page 1</li>
+            <li>Click "Add Invoice"</li>
+            <li>Click the <strong>"Fill from Gastos"</strong> bookmark</li>
+            <li>The bookmarklet fills Invoice Number + Date, then clicks Add Details</li>
+            <li>On the next page, it fills each line item (Category, Amount, Description)</li>
+            <li>Review and click Save</li>
+          </ol>
+        </div>
+        <div class="modal-actions" style="margin-top:1rem;">
+          <button type="button" class="btn" onclick="gastosCloseBookmarklet()">Close</button>
+        </div>
+      </div>
+    </div>
 
   <!-- Change Password Modal -->
   <div id="changePasswordModal" class="modal-overlay hidden">
@@ -753,6 +2068,14 @@
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="/js/scorecard.js"></script>
+  <script src="/js/social-posts.js?v=24"></script>
+  <script src="/js/gastos.js?v=14"></script>
+  <script src="/js/apprenticeship.js?v=1"></script>
   <script src="/js/app.js"></script>
 </body>
 </html>

@@ -5,7 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>La Rambla — Restaurant Admin Hub</title>
   <link rel="stylesheet" href="/css/style.css">
-  <link rel="icon" href="/img/favicon.ico" type="image/x-icon">
+  <link rel="icon" type="image/x-icon" href="/img/favicon.ico">
+  <link rel="icon" type="image/png" sizes="192x192" href="/img/icon-192.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/img/apple-touch-icon.png">
   <meta name="theme-color" content="#E8B5A8">
 </head>
 <body>
@@ -30,6 +32,24 @@
         <p style="color:var(--text-light); font-size:0.8rem; margin-bottom:1rem;">First time? Use your PIN as both username and password.</p>
         <div id="error" style="color: var(--danger); font-size: 0.875rem; margin-bottom: 1rem; display: none;"></div>
         <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">Sign In</button>
+        <p style="text-align:center; margin-top:0.75rem;">
+          <a href="#" id="forgotPasswordLink" style="color:var(--text-light); font-size:0.8rem; text-decoration:underline;">Forgot your password?</a>
+        </p>
+      </form>
+
+      <!-- Reset Password Form -->
+      <form id="resetForm" style="display:none;">
+        <p style="margin-bottom:1rem; color:var(--text-light);">Enter your PIN to reset your password. Your password will be reset to your PIN, and you'll need to set a new one on your next login.</p>
+        <div class="form-group">
+          <label for="resetPin">Your PIN</label>
+          <input type="text" id="resetPin" required placeholder="Enter your Clock-In PIN">
+        </div>
+        <div id="resetError" style="color: var(--danger); font-size: 0.875rem; margin-bottom: 1rem; display: none;"></div>
+        <div id="resetSuccess" style="color: var(--success, #28a745); font-size: 0.875rem; margin-bottom: 1rem; display: none;"></div>
+        <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">Reset Password</button>
+        <p style="text-align:center; margin-top:0.75rem;">
+          <a href="#" id="backToLoginLink" style="color:var(--text-light); font-size:0.8rem; text-decoration:underline;">Back to login</a>
+        </p>
       </form>
 
       <!-- Set Password Form (shown on first login) -->

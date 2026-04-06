@@ -72,6 +72,34 @@ router.post('/set-password', async (req, res) => {
   }
 });
 
+// ── POST /api/auth/reset-to-pin — Self-service password reset ───────
+// Public endpoint (no auth). Resets password back to PIN and forces password change.
+router.post('/reset-to-pin', async (req, res) => {
+  try {
+    const { username } = req.body;
+    if (!username) {
+      return res.status(400).json({ error: 'PIN is required' });
+    }
+
+    const db = getDb();
+    const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
+    if (!user) {
+      // Don't reveal whether the account exists
+      return res.json({ success: true });
+    }
+
+    // Reset password to the PIN (username) and require change on next login
+    const hash = await bcrypt.hash(user.username, BCRYPT_ROUNDS);
+    db.prepare('UPDATE users SET password_hash = ?, must_change_password = 1 WHERE id = ?')
+      .run(hash, user.id);
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Reset-to-pin error:', err.message);
+    res.status(500).json({ error: 'Failed to reset password' });
+  }
+});
+
 // ── POST /api/auth/logout — Destroy session ─────────────────────────
 router.post('/logout', (req, res) => {
   req.session.destroy(() => {
@@ -84,12 +112,22 @@ router.get('/me', (req, res) => {
   if (!req.session?.userId) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
-  res.json({
+  const response = {
     userId: req.session.userId,
     username: req.session.username,
     role: req.session.role,
     employeeId: req.session.employeeId
-  });
+  };
+  // Include employee role (Director, etc.) for permission checks
+  if (req.session.employeeId) {
+    const db = getDb();
+    const emp = db.prepare('SELECT role AS employee_role, department FROM employees WHERE id = ?').get(req.session.employeeId);
+    if (emp) {
+      response.employeeRole = emp.employee_role;
+      response.department = emp.department;
+    }
+  }
+  res.json(response);
 });
 
 // ── POST /api/auth/change-password — Admin changes own password ─────

@@ -5,20 +5,52 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>La Rambla — Employee Portal</title>
   <link rel="stylesheet" href="/css/style.css">
-  <link rel="icon" href="/img/favicon.ico" type="image/x-icon">
+  <link rel="icon" type="image/x-icon" href="/img/favicon.ico">
+  <link rel="icon" type="image/png" sizes="192x192" href="/img/icon-192.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/img/apple-touch-icon.png">
   <meta name="theme-color" content="#004F71">
 </head>
 <body>
   <header class="app-header">
     <div class="header-brand">
-      <img src="/img/logo.png" alt="La Rambla" onerror="this.style.display='none'">
+      <div class="tab-nav">
+        <button class="tab-nav-toggle" onclick="toggleEmpTabMenu()" aria-label="Menu">
+          <span class="tab-nav-icon">&#9776;</span>
+        </button>
+        <div class="tab-nav-menu" id="empTabMenu">
+          <button class="tab-nav-item active" data-tab="history" onclick="switchTab('history')">&#128202; Accrual History</button>
+          <button class="tab-nav-item" data-tab="timeoff" onclick="switchTab('timeoff')">&#128197; Time-Off History</button>
+          <button class="tab-nav-item" data-tab="request" onclick="switchTab('request')">&#128221; Request Time-Off</button>
+          <button class="tab-nav-item" data-tab="myrequests" onclick="switchTab('myrequests')">&#128203; My Requests</button>
+          <button class="tab-nav-item" data-tab="reviews" onclick="switchTab('reviews')">&#11088; Performance Reviews</button>
+          <button class="tab-nav-item" data-tab="manage-reviews" onclick="switchTab('manage-reviews')" id="manageReviewsTab" style="display:none;">&#128736; Manage Reviews</button>
+          <button class="tab-nav-item" data-tab="ac-submit" onclick="switchTab('ac-submit')" id="acSubmitTab" style="display:none;">&#9989; Hospitality Evaluations</button>
+          <button class="tab-nav-item" data-tab="my-ac-evals" onclick="switchTab('my-ac-evals')" id="myACEvalsTab" style="display:none;">&#128203; My Hospitality Evals</button>
+          <button class="tab-nav-item" data-tab="leadership" onclick="switchTab('leadership')" id="leadershipTab" style="display:none;">&#127891; Leadership Academy</button>
+          <button class="tab-nav-item" data-tab="scorecard" onclick="switchTab('scorecard')" id="scorecardTab" style="display:none;">&#128200; Executive Scorecard</button>
+          <button class="tab-nav-item" data-tab="social-posts" onclick="switchTab('social-posts')" id="socialPostsTab" style="display:none;">&#128247; Social Posts</button>
+          <button class="tab-nav-item" data-tab="gastos" onclick="switchTab('gastos')" id="gastosTab" style="display:none;">&#128176; Gastos</button>
+          <button class="tab-nav-item" data-tab="my-apprenticeship" onclick="switchTab('my-apprenticeship')" id="myApprTab" style="display:none;">&#127891; My Apprenticeship</button>
+          <button class="tab-nav-item" data-tab="appr-signoffs" onclick="switchTab('appr-signoffs')" id="apprSignoffsTab" style="display:none;">&#9998; Apprentice Sign-offs</button>
+          <button class="tab-nav-item" data-tab="apprenticeship-admin" onclick="switchTab('apprenticeship-admin')" id="apprAdminTab" style="display:none;">&#127891; Apprenticeship</button>
+        </div>
+      </div>
+      <img src="/img/cfa-logo-red.png" alt="Chick-fil-A" style="height:56px; object-fit:contain; margin:-8px 0;" onerror="this.style.display='none'">
       <div class="header-divider"></div>
       <h1>Employee Portal</h1>
     </div>
-    <button class="hamburger-btn" onclick="toggleMobileMenu()" aria-label="Menu">&#9776;</button>
-    <div class="header-actions">
-      <span id="userInfo"></span>
-      <button class="btn btn-sm" onclick="logout()">Sign Out</button>
+    <div class="header-right">
+      <div class="user-menu-wrapper">
+        <button class="user-menu-btn" onclick="toggleUserMenu()" aria-label="User menu">
+          <span id="userInfo"></span>
+          <span class="user-menu-arrow">&#9662;</span>
+        </button>
+        <div class="user-menu-dropdown" id="userMenuDropdown">
+          <button onclick="showChangePassword()">&#128274; Change Password</button>
+          <div class="user-menu-divider"></div>
+          <button onclick="logout()">&#128682; Sign Out</button>
+        </div>
+      </div>
     </div>
   </header>
 
@@ -26,13 +58,6 @@
     <!-- Balance Cards -->
     <div class="stats-grid" id="balances"></div>
 
-    <!-- Tabs -->
-    <div class="tabs">
-      <button class="tab active" data-tab="history" onclick="switchTab('history')">Accrual History</button>
-      <button class="tab" data-tab="timeoff" onclick="switchTab('timeoff')">Time-Off History</button>
-      <button class="tab" data-tab="request" onclick="switchTab('request')">Request Time-Off</button>
-      <button class="tab" data-tab="myrequests" onclick="switchTab('myrequests')">My Requests</button>
-    </div>
 
     <!-- Accrual History Tab -->
     <div id="tab-history">
@@ -165,8 +190,798 @@
         </table>
       </div>
     </div>
+    <!-- Performance Reviews Tab -->
+    <div id="tab-reviews" style="display:none;">
+      <div id="reviewsContent">
+        <p style="text-align:center; color:var(--text-light); padding:2rem;">Loading reviews...</p>
+      </div>
+    </div>
+
+    <!-- Manage Reviews Tab (Directors Only) -->
+    <div id="tab-manage-reviews" style="display:none;">
+      <!-- Submission Form -->
+      <div class="detail-panel" style="max-width:700px; margin-bottom:1.5rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="document.getElementById('dirPerfFormBody').style.display = document.getElementById('dirPerfFormBody').style.display === 'none' ? '' : 'none'; this.querySelector('.toggle-arrow').textContent = document.getElementById('dirPerfFormBody').style.display === 'none' ? '&#9654;' : '&#9660;';">
+          <h2 id="dirPerfFormTitle">Submit Performance Review</h2>
+          <span class="toggle-arrow" style="font-size:1.25rem; color:var(--brand-navy);">&#9660;</span>
+        </div>
+        <div id="dirPerfFormBody">
+        <form id="dirPerfForm" onsubmit="dirSubmitReview(event)">
+          <div class="perf-form-grid" style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:1rem;">
+            <div class="form-group">
+              <label for="dirPerfEmployee">Employee</label>
+              <select id="dirPerfEmployee" required onchange="dirOnEmployeeChange()"></select>
+              <div id="dirBohFohToggleRow" style="display:none; margin-top:0.5rem;">
+                <label style="font-size:0.75rem; color:var(--text-light);">Evaluate as:</label>
+                <select id="dirBohToggle" onchange="dirOnEmployeeChange()" style="width:auto; padding:0.25rem 0.5rem; font-size:0.8125rem;">
+                  <option value="FOH">FOH</option>
+                  <option value="BOH">BOH</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="dirPerfYear">Year</label>
+              <select id="dirPerfYear" required></select>
+            </div>
+            <div class="form-group">
+              <label for="dirPerfQuarter">Quarter</label>
+              <select id="dirPerfQuarter" required>
+                <option value="1">Q1 (Jan–Mar)</option>
+                <option value="2">Q2 (Apr–Jun)</option>
+                <option value="3">Q3 (Jul–Sep)</option>
+                <option value="4">Q4 (Oct–Dec)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="perf-scores-grid">
+            <!-- FOH: single Operations score -->
+            <div class="perf-score-row" id="dirOpsFOH">
+              <label id="dirOpsLabel">Conoce y Ejecuta la Operación <small>Operations</small></label>
+              <select id="dirPerfOperations" onchange="dirUpdateAvg()">
+                <option value="">—</option>
+                <option value="1">1 – Necesita Mejorar Urgente</option>
+                <option value="2">2 – Necesita Mejorar</option>
+                <option value="3">3 – Consistente</option>
+                <option value="4">4 – Alto Desempeño</option>
+                <option value="5">5 – Modelo a Seguir</option>
+              </select>
+            </div>
+            <!-- BOH: 7 subsections -->
+            <div id="dirOpsBOH" style="display:none;">
+              <div class="perf-score-row" style="border-left:3px solid var(--brand-navy); padding-left:0.75rem; margin-bottom:0.5rem;">
+                <label style="font-weight:700; color:var(--brand-navy);">Conoce y Ejecuta la Operación <small>BOH Subsections</small></label>
+                <div id="dirBohOpsAvgDisplay" style="font-size:0.875rem; color:var(--text-light);">Avg: —</div>
+              </div>
+              <div class="boh-subsections-grid">
+                <div class="perf-score-row boh-sub"><label>Primaria</label><select id="dirBohPrimaria" onchange="dirUpdateBohAvg(); dirUpdateAvg()"><option value="">—</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></div>
+                <div class="perf-score-row boh-sub"><label>Secundaria</label><select id="dirBohSecundaria" onchange="dirUpdateBohAvg(); dirUpdateAvg()"><option value="">—</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></div>
+                <div class="perf-score-row boh-sub"><label>Máquinas</label><select id="dirBohMaquinas" onchange="dirUpdateBohAvg(); dirUpdateAvg()"><option value="">—</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></div>
+                <div class="perf-score-row boh-sub"><label>Breading</label><select id="dirBohBreading" onchange="dirUpdateBohAvg(); dirUpdateAvg()"><option value="">—</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></div>
+                <div class="perf-score-row boh-sub"><label>Fileteo, Labels y Limpieza</label><select id="dirBohFileteo" onchange="dirUpdateBohAvg(); dirUpdateAvg()"><option value="">—</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></div>
+                <div class="perf-score-row boh-sub"><label>Prep</label><select id="dirBohPrep" onchange="dirUpdateBohAvg(); dirUpdateAvg()"><option value="">—</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></div>
+                <div class="perf-score-row boh-sub"><label>Desayuno</label><select id="dirBohDesayuno" onchange="dirUpdateBohAvg(); dirUpdateAvg()"><option value="">—</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></div>
+              </div>
+            </div>
+            <div class="perf-score-row">
+              <label>Vive los Valores de CFA <small>CFA Values</small></label>
+              <select id="dirPerfCfaValues" required onchange="dirUpdateAvg()">
+                <option value="">—</option>
+                <option value="1">1 – Necesita Mejorar Urgente</option>
+                <option value="2">2 – Necesita Mejorar</option>
+                <option value="3">3 – Consistente</option>
+                <option value="4">4 – Alto Desempeño</option>
+                <option value="5">5 – Modelo a Seguir</option>
+              </select>
+            </div>
+            <div class="perf-score-row">
+              <label>Se Comunica con Claridad <small>Communication</small></label>
+              <select id="dirPerfCommunication" required onchange="dirUpdateAvg()">
+                <option value="">—</option>
+                <option value="1">1 – Necesita Mejorar Urgente</option>
+                <option value="2">2 – Necesita Mejorar</option>
+                <option value="3">3 – Consistente</option>
+                <option value="4">4 – Alto Desempeño</option>
+                <option value="5">5 – Modelo a Seguir</option>
+              </select>
+            </div>
+            <div class="perf-score-row">
+              <label id="dirGuestLabel">Obsesión por el Invitado <small>Guest Obsession</small></label>
+              <select id="dirPerfGuestObsession" required onchange="dirUpdateAvg()">
+                <option value="">—</option>
+                <option value="1">1 – Necesita Mejorar Urgente</option>
+                <option value="2">2 – Necesita Mejorar</option>
+                <option value="3">3 – Consistente</option>
+                <option value="4">4 – Alto Desempeño</option>
+                <option value="5">5 – Modelo a Seguir</option>
+              </select>
+            </div>
+            <div class="perf-score-row">
+              <label>Demuestra Responsabilidad <small>Responsibility</small></label>
+              <select id="dirPerfResponsibility" required onchange="dirUpdateAvg()">
+                <option value="">—</option>
+                <option value="1">1 – Necesita Mejorar Urgente</option>
+                <option value="2">2 – Necesita Mejorar</option>
+                <option value="3">3 – Consistente</option>
+                <option value="4">4 – Alto Desempeño</option>
+                <option value="5">5 – Modelo a Seguir</option>
+              </select>
+            </div>
+            <div class="perf-score-row">
+              <label>Protege la Cultura y Actitud Positiva <small>Culture</small></label>
+              <select id="dirPerfCulture" required onchange="dirUpdateAvg()">
+                <option value="">—</option>
+                <option value="1">1 – Necesita Mejorar Urgente</option>
+                <option value="2">2 – Necesita Mejorar</option>
+                <option value="3">3 – Consistente</option>
+                <option value="4">4 – Alto Desempeño</option>
+                <option value="5">5 – Modelo a Seguir</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-top:1rem;">
+            <div class="form-group">
+              <label>Auto Average</label>
+              <div id="dirPerfAutoAvg" class="perf-avg-display">—</div>
+            </div>
+            <div class="form-group">
+              <label for="dirPerfOverride">Overall Score Override <small>(optional)</small></label>
+              <input type="number" id="dirPerfOverride" step="0.01" min="1" max="5" placeholder="Leave blank to use average">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="dirPerfComments">Comments / Coaching</label>
+            <textarea id="dirPerfComments" rows="3" placeholder="Coaching notes, areas of improvement, recognition..."></textarea>
+          </div>
+
+          <div style="display:flex; gap:0.75rem;">
+            <button type="submit" class="btn btn-primary" id="dirPerfSubmitBtn">Submit Review</button>
+            <button type="button" class="btn" id="dirPerfCancelEdit" style="display:none;" onclick="dirCancelEdit()">Cancel Edit</button>
+          </div>
+        </form>
+        </div>
+      </div>
+
+      <!-- Rating Scale Legend -->
+      <div class="detail-panel" style="margin-bottom:1rem; padding:1rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="document.getElementById('dirScaleBody').style.display = document.getElementById('dirScaleBody').style.display === 'none' ? '' : 'none'; this.querySelector('.toggle-arrow').textContent = document.getElementById('dirScaleBody').style.display === 'none' ? '&#9654;' : '&#9660;';">
+          <h3 style="margin:0; color:var(--brand-navy); font-size:0.9375rem;">&#128203; Escala de Evaluaci&oacute;n</h3>
+          <span class="toggle-arrow" style="font-size:1rem; color:var(--brand-navy);">&#9654;</span>
+        </div>
+        <div id="dirScaleBody" style="display:none; margin-top:1rem;">
+          <div class="perf-legend-items" style="max-width:500px;">
+            <div class="perf-legend-item"><span class="perf-score-badge score-red">1</span><div><strong>Necesita Mejorar Urgente</strong><br><small>Ejecuci&oacute;n inconsistente; requiere recordatorios o correcciones frecuentes.</small></div></div>
+            <div class="perf-legend-item"><span class="perf-score-badge score-red">2</span><div><strong>Necesita Mejorar</strong><br><small>Entiende las expectativas, pero necesita coaching para aplicarlas de forma consistente.</small></div></div>
+            <div class="perf-legend-item"><span class="perf-score-badge score-yellow">3</span><div><strong>Consistente</strong><br><small>Cumple con las expectativas de manera independiente y confiable.</small></div></div>
+            <div class="perf-legend-item"><span class="perf-score-badge score-green">4</span><div><strong>Alto Desempe&ntilde;o</strong><br><small>Supera expectativas e influye positivamente en otros.</small></div></div>
+            <div class="perf-legend-item"><span class="perf-score-badge score-green">5</span><div><strong>Modelo a Seguir</strong><br><small>Establece el est&aacute;ndar; otros aprenden observando su ejemplo.</small></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Category Descriptions Accordion -->
+      <div class="detail-panel" style="margin-bottom:1.5rem; padding:1rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="document.getElementById('dirCatAccordion').style.display = document.getElementById('dirCatAccordion').style.display === 'none' ? '' : 'none'; this.querySelector('.toggle-arrow').textContent = document.getElementById('dirCatAccordion').style.display === 'none' ? '&#9654;' : '&#9660;';">
+          <h3 style="margin:0; color:var(--brand-navy); font-size:0.9375rem;">&#128214; Descripci&oacute;n de Categor&iacute;as</h3>
+          <span class="toggle-arrow" style="font-size:1rem; color:var(--brand-navy);">&#9654;</span>
+        </div>
+        <div id="dirCatAccordion" style="display:none; margin-top:1rem;">
+
+          <div class="cat-accordion-item">
+            <div class="cat-accordion-header" onclick="toggleCatAccordion(this)">
+              <div><span class="cat-accordion-badge">OPS</span><strong>Conoce y Ejecuta la Operaci&oacute;n del Restaurante</strong><br><small style="color:var(--text-light);">Excelencia Operacional</small></div>
+              <span class="toggle-arrow">&#9654;</span>
+            </div>
+            <div class="cat-accordion-body">
+              <p class="cat-def"><em>Demuestra dominio y ejecuci&oacute;n consistente de los est&aacute;ndares operacionales y de marca de Chick-fil-A, anticipando y resolviendo situaciones del restaurante.</em></p>
+              <h5>Comportamientos Clave</h5>
+              <ul>
+                <li>Sigue los est&aacute;ndares corporativos de: <strong>Seguridad Alimentaria, Calidad de Alimentos, Limpieza, Eficiencia Operacional, Servicio R&aacute;pido</strong></li>
+                <li>Anticipa y resuelve problemas operacionales de manera oportuna</li>
+                <li>Usa y mantiene correctamente los equipos e instalaciones</li>
+                <li>Utiliza adecuadamente las herramientas y recursos (Pathway, Sidekick, ORG, Quality Photos, etc.)</li>
+              </ul>
+              <h5>&#11088; Modelo a Seguir</h5>
+              <ul><li>Ejecuta correctamente aun bajo presi&oacute;n</li><li>Previene problemas antes de que afecten al invitado o al equipo</li></ul>
+            </div>
+          </div>
+
+          <div class="cat-accordion-item">
+            <div class="cat-accordion-header" onclick="toggleCatAccordion(this)">
+              <div><span class="cat-accordion-badge" style="background:#7C3AED15; color:#7C3AED;">VAL</span><strong>Aplica Consistentemente los Valores de Chick-fil-A</strong><br><small style="color:var(--text-light);">Alineaci&oacute;n con los Valores</small></div>
+              <span class="toggle-arrow">&#9654;</span>
+            </div>
+            <div class="cat-accordion-body">
+              <p class="cat-def"><em>Demuestra los cuatro valores fundamentales de Chick-fil-A a trav&eacute;s de comportamientos observables y consistentes durante cada turno.</em></p>
+              <div class="cat-values-grid">
+                <div class="cat-value-card"><h5>Here to Serve <small>(Aqu&iacute; para Servir)</small></h5><ul><li>Pone las necesidades del equipo y del negocio por encima de las propias</li><li>Busca oportunidades para ayudar sin que se lo pidan</li></ul></div>
+                <div class="cat-value-card"><h5>Better Together <small>(Mejor Juntos)</small></h5><ul><li>Fomenta la confianza, autenticidad y respeto mutuo</li><li>Colabora activamente y apoya a compa&ntilde;eros en momentos de alto volumen</li></ul></div>
+                <div class="cat-value-card"><h5>Purpose Driven <small>(Con Prop&oacute;sito)</small></h5><ul><li>Ejecuta cada tarea con intenci&oacute;n, sin importar su tama&ntilde;o</li><li>Entiende c&oacute;mo su rol contribuye al &eacute;xito del restaurante</li></ul></div>
+                <div class="cat-value-card"><h5>Pursue What's Next <small>(Buscar lo que Sigue)</small></h5><ul><li>Demuestra mentalidad de crecimiento con acciones concretas</li><li>Acepta feedback y lo aplica de forma visible en su trabajo</li></ul></div>
+              </div>
+              <h5>&#11088; Modelo a Seguir</h5>
+              <ul><li>Sus acciones inspiran a otros a vivir los valores sin necesidad de recordatorios</li></ul>
+            </div>
+          </div>
+
+          <div class="cat-accordion-item">
+            <div class="cat-accordion-header" onclick="toggleCatAccordion(this)">
+              <div><span class="cat-accordion-badge" style="background:#0E749015; color:#0E7490;">COM</span><strong>Se Comunica con Claridad</strong><br><small style="color:var(--text-light);">Claridad y Composici&oacute;n</small></div>
+              <span class="toggle-arrow">&#9654;</span>
+            </div>
+            <div class="cat-accordion-body">
+              <p class="cat-def"><em>Se comunica de manera clara, respetuosa y efectiva en todas las situaciones.</em></p>
+              <h5>Comportamientos Clave</h5>
+              <ul><li>Se prepara antes de comunicar o ejecutar</li><li>Adapta su estilo y ritmo de comunicaci&oacute;n a las necesidades de otros</li><li>Utiliza herramientas y recursos para asegurar exactitud</li><li>Se expresa de forma clara, directa y respetuosa</li><li>Mantiene la calma bajo presi&oacute;n</li></ul>
+              <h5>&#11088; Modelo a Seguir</h5>
+              <ul><li>Reduce confusi&oacute;n</li><li>Genera confianza y alineaci&oacute;n en el equipo</li></ul>
+            </div>
+          </div>
+
+          <div class="cat-accordion-item">
+            <div class="cat-accordion-header" onclick="toggleCatAccordion(this)">
+              <div><span class="cat-accordion-badge" style="background:#DC262615; color:#DC2626;">GST</span><strong>Obsesi&oacute;n por el Invitado</strong><br><small style="color:var(--text-light);">Excelencia en Hospitalidad</small></div>
+              <span class="toggle-arrow">&#9654;</span>
+            </div>
+            <div class="cat-accordion-body">
+              <p class="cat-def"><em>Prioriza constantemente la experiencia del invitado, anticipando necesidades y ofreciendo hospitalidad genuina en cada interacci&oacute;n.</em></p>
+              <h5>Comportamientos Clave</h5>
+              <ul><li>Trata cada interacci&oacute;n con el invitado como importante</li><li>Anticipa necesidades en lugar de esperar a que se lo pidan</li><li>Demuestra hospitalidad aut&eacute;ntica, incluso en momentos de alto volumen</li><li>Escucha activamente y responde con empat&iacute;a</li><li>Recupera el servicio de manera r&aacute;pida y apropiada cuando surge un problema</li><li>Protege la experiencia del invitado usando lenguaje positivo y profesional en &aacute;reas visibles</li></ul>
+              <h5>&#11088; Modelo a Seguir</h5>
+              <ul><li>Hace que los invitados se sientan cuidados</li><li>Convierte experiencias normales en memorables</li></ul>
+            </div>
+          </div>
+
+          <div class="cat-accordion-item">
+            <div class="cat-accordion-header" onclick="toggleCatAccordion(this)">
+              <div><span class="cat-accordion-badge" style="background:#B4530915; color:#B45309;">RSP</span><strong>Demuestra Sentido de Pertenencia y Responsabilidad</strong><br><small style="color:var(--text-light);">Accountability</small></div>
+              <span class="toggle-arrow">&#9654;</span>
+            </div>
+            <div class="cat-accordion-body">
+              <p class="cat-def"><em>Asume responsabilidad por su desempe&ntilde;o y contribuye activamente al &eacute;xito del equipo.</em></p>
+              <h5>Comportamientos Clave</h5>
+              <ul><li>Cumple con lo que promete</li><li>Se responsabiliza por errores y aprende de ellos</li><li>Act&uacute;a pensando en el bienestar del equipo</li><li>Mantiene altos est&aacute;ndares personales</li></ul>
+              <h5>&#11088; Modelo a Seguir</h5>
+              <ul><li>Es confiable sin necesidad de supervisi&oacute;n constante</li><li>Se enfoca en soluciones, no excusas</li></ul>
+            </div>
+          </div>
+
+          <div class="cat-accordion-item">
+            <div class="cat-accordion-header" onclick="toggleCatAccordion(this)">
+              <div><span class="cat-accordion-badge" style="background:#15803D15; color:#15803D;">CUL</span><strong>Protege la Cultura y Mantiene una Actitud Positiva</strong><br><small style="color:var(--text-light);">Regulaci&oacute;n Emocional y Canales de Comunicaci&oacute;n</small></div>
+              <span class="toggle-arrow">&#9654;</span>
+            </div>
+            <div class="cat-accordion-body">
+              <p class="cat-def"><em>Maneja sus emociones y frustraciones de forma madura, utilizando los canales correctos para expresar preocupaciones y protegiendo la moral del equipo.</em></p>
+              <h5>Comportamientos Clave</h5>
+              <ul><li>Regula sus emociones y no permite que la frustraci&oacute;n afecte su trato con otros</li><li>No se queja, no chismea ni ventila frustraciones con otros Team Members</li><li>Canaliza inquietudes directamente con la persona correcta: <strong>L&iacute;der de Turno &rarr; Director &rarr; Operador</strong></li><li>Identifica problemas y los reporta con propuestas de soluci&oacute;n, no solo quejas</li><li>Habla con respeto sobre l&iacute;deres, compa&ntilde;eros y el negocio, incluso cuando no est&aacute;n presentes</li></ul>
+              <div class="cat-clarification">
+                <div class="cat-no"><strong>Esto NO significa:</strong> Ignorar problemas &bull; Callarse ante situaciones injustas &bull; No dar feedback</div>
+                <div class="cat-yes"><strong>Esto S&Iacute; significa:</strong> Elegir el momento, lugar y persona correctos para expresarse de forma constructiva</div>
+              </div>
+              <h5>&#11088; Modelo a Seguir</h5>
+              <ul><li>Cuando detecta negatividad en otros, interviene de forma constructiva</li><li>Es reconocido como alguien que eleva la moral del equipo en momentos dif&iacute;ciles</li></ul>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Reviews Table -->
+      <div class="table-container">
+        <div class="toolbar">
+          <select id="dirFilterYear" onchange="dirLoadReviews()" style="width:auto;">
+            <option value="">All Years</option>
+          </select>
+          <select id="dirFilterQuarter" onchange="dirLoadReviews()" style="width:auto;">
+            <option value="">All Quarters</option>
+            <option value="1">Q1</option>
+            <option value="2">Q2</option>
+            <option value="3">Q3</option>
+            <option value="4">Q4</option>
+          </select>
+          <div style="margin-left:auto;">
+            <button class="btn btn-sm" onclick="dirExportReviews()">Export Excel</button>
+          </div>
+        </div>
+        <table class="responsive-table">
+          <thead>
+            <tr>
+              <th data-dsort="employee_name" class="sortable" onclick="dirSortBy('employee_name')">Employee<span class="sort-arrow"> &#9650;</span></th>
+              <th>Period</th>
+              <th data-dsort="operations" class="text-center sortable" onclick="dirSortBy('operations')" title="Conoce y Ejecuta la Operación">OPS<span class="sort-arrow"></span></th>
+              <th data-dsort="cfa_values" class="text-center sortable" onclick="dirSortBy('cfa_values')" title="Vive los Valores de CFA">VAL<span class="sort-arrow"></span></th>
+              <th data-dsort="communication" class="text-center sortable" onclick="dirSortBy('communication')" title="Se Comunica con Claridad">COM<span class="sort-arrow"></span></th>
+              <th data-dsort="guest_obsession" class="text-center sortable" onclick="dirSortBy('guest_obsession')" title="Obsesión por el Invitado">GST<span class="sort-arrow"></span></th>
+              <th data-dsort="responsibility" class="text-center sortable" onclick="dirSortBy('responsibility')" title="Demuestra Responsabilidad">RSP<span class="sort-arrow"></span></th>
+              <th data-dsort="culture" class="text-center sortable" onclick="dirSortBy('culture')" title="Protege la Cultura y Actitud Positiva">CUL<span class="sort-arrow"></span></th>
+              <th data-dsort="average" class="text-center sortable" onclick="dirSortBy('average')">Avg<span class="sort-arrow"></span></th>
+              <th data-dsort="overall" class="text-center sortable" onclick="dirSortBy('overall')">Overall<span class="sort-arrow"></span></th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="dirReviewsBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- A&C Evaluations Tab (Trainer Submission) -->
+    <div id="tab-ac-submit" style="display:none;">
+      <!-- Submission Form -->
+      <div class="detail-panel" style="max-width:700px; margin-bottom:1.5rem;">
+        <h2 style="color:var(--brand-navy); margin-bottom:1rem;">Submit Hospitality Evaluation</h2>
+        <form id="acSubmitForm" onsubmit="submitACEval(event)">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
+            <div class="form-group" style="margin:0;">
+              <label>Team Member</label>
+              <select id="acEmployee" required onchange="onACEmployeeChange()"></select>
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label>Location</label>
+              <select id="acLocation" required>
+                <option value="front_counter">Front Counter</option>
+                <option value="drive_thru">Drive Thru</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Evaluation Type</label>
+            <div style="display:flex; gap:0.5rem;">
+              <button type="button" class="btn btn-sm ac-type-btn active" onclick="setACType('order_taking', this)">Order Taking</button>
+              <button type="button" class="btn btn-sm ac-type-btn" onclick="setACType('meal_delivery', this)">Meal Delivery</button>
+            </div>
+          </div>
+
+          <div id="acChecklist" style="margin:1rem 0;"></div>
+
+          <div style="display:flex; align-items:center; gap:1rem; margin:1rem 0; padding:0.75rem; background:var(--bg-alt, #f8f9fa); border-radius:8px;">
+            <strong>Score:</strong>
+            <span id="acScoreDisplay" style="font-size:1.5rem; font-weight:700; color:var(--brand-navy);">—</span>
+          </div>
+
+          <div class="form-group">
+            <label>Comments / Coaching Notes</label>
+            <textarea id="acComments" rows="3" placeholder="Optional feedback..."></textarea>
+          </div>
+
+          <button type="submit" class="btn btn-primary">Submit Evaluation</button>
+        </form>
+      </div>
+
+      <!-- Recent Submissions by this trainer -->
+      <div class="table-container">
+        <div class="toolbar"><strong style="color:var(--brand-navy);">My Recent Submissions</strong></div>
+        <table class="responsive-table">
+          <thead>
+            <tr><th>Date</th><th>Employee</th><th>Type</th><th>Location</th><th class="text-center">Score</th><th></th></tr>
+          </thead>
+          <tbody id="acTrainerTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- My A&C Evals Tab (Employee Read-Only) -->
+    <div id="tab-my-ac-evals" style="display:none;">
+      <div id="myACEvalsContent">
+        <p style="text-align:center; color:var(--text-light); padding:2rem;">Loading evaluations...</p>
+      </div>
+    </div>
+
+    <!-- Leadership Academy Tab -->
+    <div id="tab-leadership" style="display:none;">
+      <div id="laMyDashboard">
+        <p style="text-align:center; color:var(--text-light); padding:2rem;">Loading Leadership Academy...</p>
+      </div>
+    </div>
+
+    <!-- Executive Scorecard Tab (Directors Only — Read-Only) -->
+    <div id="tab-scorecard" style="display:none;">
+      <!-- Period Selector & Month Picker -->
+      <div class="detail-panel" style="margin-bottom:1.5rem;">
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem;">
+          <h2 style="color:var(--brand-navy); margin:0;">Executive Scorecard</h2>
+          <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+            <div style="display:flex; gap:0.25rem;">
+              <button class="btn btn-sm sc-period-btn active" onclick="empSetSCPeriod('monthly', this)">Mensual</button>
+              <button class="btn btn-sm sc-period-btn" onclick="empSetSCPeriod('90d', this)">90 D&#237;as</button>
+              <button class="btn btn-sm sc-period-btn" onclick="empSetSCPeriod('6m', this)">6 Meses</button>
+              <button class="btn btn-sm sc-period-btn" onclick="empSetSCPeriod('year', this)">Anual</button>
+            </div>
+            <input type="month" id="empScMonthPicker" onchange="empLoadScorecard()" style="padding:0.4rem 0.6rem; border:1px solid var(--border); border-radius:var(--radius-sm); font-size:0.875rem;">
+            <button class="btn btn-sm" onclick="empShowSCDataEntry()" title="Ingresar datos">&#9998; Ingresar Datos</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 1: Operational Excellence & Second Mile Service -->
+      <div class="detail-panel" style="margin-bottom:1.5rem;">
+        <h3 style="color:var(--brand-navy); margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem;">
+          <span style="font-size:1.3rem;">&#127942;</span> Hospitality & Second Mile Service
+        </h3>
+        <!-- OSAT General Card + Weekday Chart side by side -->
+        <div style="display:flex; gap:1.5rem; align-items:stretch; margin-bottom:1.5rem; flex-wrap:wrap;">
+          <div id="empScOsatGeneralSlot" style="flex:0 0 220px; display:flex;"></div>
+          <div style="flex:1; min-width:300px; position:relative; height:280px;">
+            <canvas id="empScOsatTrendChart"></canvas>
+          </div>
+        </div>
+        <div class="sc-section" id="empScSection1">
+          <p style="color:var(--text-light); text-align:center; padding:2rem;">Cargando datos...</p>
+        </div>
+      </div>
+
+      <!-- Section 2: Sales & Growth -->
+      <div class="detail-panel" style="margin-bottom:1.5rem;">
+        <h3 style="color:var(--brand-navy); margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem;">
+          <span style="font-size:1.3rem;">&#128176;</span> Ventas y Crecimiento
+        </h3>
+        <!-- Sales Total Card + Trend Chart side by side -->
+        <div style="display:flex; gap:1.5rem; align-items:stretch; margin-bottom:1.5rem; flex-wrap:wrap;">
+          <div id="empScSalesTotalSlot" style="flex:0 0 220px; display:flex;"></div>
+          <div id="empScSalesChartWrap" style="flex:1; min-width:0; position:relative; height:320px;">
+            <canvas id="empScSalesTrendChart"></canvas>
+          </div>
+        </div>
+        <div class="sc-section" id="empScSection2">
+          <p style="color:var(--text-light); text-align:center; padding:2rem;">Cargando datos...</p>
+        </div>
+      </div>
+
+      <!-- Section 3: Quality & Brand Standards -->
+      <div class="detail-panel" style="margin-bottom:1.5rem;">
+        <h3 style="color:var(--brand-navy); margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem;">
+          <span style="font-size:1.3rem;">&#9989;</span> Excelencia Operacional
+        </h3>
+        <div class="sc-section" id="empScSection3">
+          <p style="color:var(--text-light); text-align:center; padding:2rem;">Cargando datos...</p>
+        </div>
+        <div style="margin-top:1rem;">
+          <h4>🏎️ Speed of Service (SOS) Trend</h4>
+          <div style="position:relative; width:100%; height:280px;">
+            <canvas id="empScSosTrendChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 4: Community -->
+      <div class="detail-panel" style="margin-bottom:1.5rem;">
+        <h3 style="color:var(--brand-navy); margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem;">
+          <span style="font-size:1.3rem;">&#128227;</span> Comunidad
+        </h3>
+        <div class="sc-section" id="empScSection4">
+          <p style="color:var(--text-light); text-align:center; padding:2rem;">Cargando datos...</p>
+        </div>
+      </div>
+
+      <!-- Data Entry Modal -->
+      <div id="empScEntryModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:1000; overflow-y:auto;">
+        <div style="max-width:800px; margin:2rem auto; background:white; border-radius:var(--radius-lg); padding:2rem; position:relative;">
+          <button onclick="empCloseSCModal()" style="position:absolute; top:1rem; right:1rem; background:none; border:none; font-size:1.5rem; cursor:pointer;">&times;</button>
+          <h2 style="color:var(--brand-navy); margin-bottom:1rem;">Ingresar Datos Mensuales</h2>
+          <div style="margin-bottom:1rem;">
+            <label><strong>Mes:</strong></label>
+            <input type="month" id="empScEntryMonth" onchange="empReloadSCEntryData()" style="padding:0.4rem 0.6rem; border:1px solid var(--border); border-radius:var(--radius-sm);">
+          </div>
+          <form id="empScEntryForm" onsubmit="empSaveSCData(event)">
+            <div id="empScEntryFields"></div>
+            <div style="margin-top:1.5rem; display:flex; gap:0.75rem;">
+              <button type="submit" class="btn btn-primary">Guardar</button>
+              <button type="button" class="btn" onclick="empCloseSCModal()">Cancelar</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Social Posts Tab (Directors Only) -->
+    <div id="tab-social-posts" style="display:none;">
+      <div class="table-container">
+        <div class="toolbar" style="display:flex; align-items:center; gap:1rem; flex-wrap:wrap;">
+          <h2 style="margin:0; color:var(--brand-navy); font-size:1.25rem;">&#128247; Social Media Posts</h2>
+          <div style="margin-left:auto; display:flex; gap:0.5rem;">
+            <button class="btn btn-primary btn-sm" onclick="spShowCreate(true)">+ Nuevo Post</button>
+            <button class="btn btn-sm" onclick="spShowHistory()">Historial</button>
+          </div>
+        </div>
+        <div id="spCreatePanel" style="padding:1.5rem;">
+          <form id="spForm" onsubmit="event.preventDefault(); spGenerate();">
+            <!-- Row 1: Type + Format -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
+              <div>
+                <label style="font-size:0.8rem; font-weight:600; color:var(--brand-navy); display:block; margin-bottom:0.3rem;">Tipo de Post</label>
+                <select id="spPostType" style="width:100%; padding:0.5rem; border:1px solid var(--border); border-radius:6px; font-size:0.9rem;">
+                  <option value="weekly-special">Especial de la Semana</option>
+                  <option value="lto">Oferta por Tiempo Limitado</option>
+                  <option value="community-event">Evento Comunitario</option>
+                  <option value="seasonal">Temporada / Fecha Especial</option>
+                  <option value="brand-moment">Momento de Marca</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size:0.8rem; font-weight:600; color:var(--brand-navy); display:block; margin-bottom:0.3rem;">Formato</label>
+                <select id="spIGFormat" style="width:100%; padding:0.5rem; border:1px solid var(--border); border-radius:6px; font-size:0.9rem;">
+                  <option value="ig-square">1:1 Cuadrado (1080×1080)</option>
+                  <option value="ig-portrait">4:5 Vertical (1080×1350)</option>
+                </select>
+              </div>
+            </div>
+            <!-- Main description -->
+            <div style="margin-bottom:1rem;">
+              <label style="font-size:0.8rem; font-weight:600; color:var(--brand-navy); display:block; margin-bottom:0.3rem;">Describe tu post *</label>
+              <textarea id="spContext" rows="4" required placeholder="Ej: Nuevo Strawberry Hibiscus Lemonade, disponible por tiempo limitado..." style="width:100%; padding:0.6rem; border:1px solid var(--border); border-radius:8px; font-size:0.95rem; resize:vertical; box-sizing:border-box; line-height:1.5;"></textarea>
+              <div style="font-size:0.7rem; color:var(--text-light); margin-top:3px;">Claude generará imagen, copy y layout automáticamente.</div>
+            </div>
+            <!-- Optional photo upload -->
+            <div style="margin-bottom:1rem; padding:0.75rem; background:var(--bg-alt); border-radius:8px; border:1px solid var(--border);">
+              <div style="display:flex; align-items:center; gap:0.75rem;">
+                <span style="font-size:0.8rem; color:var(--text-light);">📷 ¿Tienes tu propia foto?</span>
+                <input type="file" id="spPhotoFile" accept="image/jpeg,image/png,image/webp" onchange="spUploadPhoto()" style="font-size:0.8rem;">
+              </div>
+              <div id="spPhotoPreview" style="margin-top:0.5rem;"></div>
+            </div>
+            <!-- Reference Design Picker -->
+            <div style="margin-bottom:1rem; padding:0.75rem; background:#f3e8ff; border-radius:8px; border:1px solid #d4b8ff;">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.5rem;">
+                <span style="font-size:0.8rem; font-weight:600; color:#6b21a8;">🎨 Diseño de Referencia</span>
+              </div>
+              <div id="spRefDesignGrid" style="display:flex; gap:0.5rem; flex-wrap:wrap; min-height:40px;">
+                <span style="font-size:0.75rem; color:var(--text-light);">Cargando...</span>
+              </div>
+              <input type="hidden" id="spSelectedRef" value="">
+              <div style="font-size:0.65rem; color:var(--text-light); margin-top:4px;">Selecciona un ejemplo para que AI copie el estilo visual.</div>
+            </div>
+            <!-- Hidden compat fields -->
+            <input type="hidden" id="spHeadline" value="">
+            <input type="hidden" id="spKeyDetail" value="">
+            <input type="hidden" id="spTone" value="default">
+            <input type="hidden" id="spAIImagePrompt" value="">
+            <select id="spCTA" style="display:none;"><option value="">Automático</option></select>
+            <input type="hidden" id="spCustomCTAInput" value="">
+            <div id="spCustomCTA" style="display:none;"></div>
+            <!-- Generate -->
+            <div style="display:flex; justify-content:flex-end; margin-top:0.5rem;">
+              <button type="submit" class="btn btn-primary" style="padding:0.6rem 2rem; font-size:1rem;">Generar Post con AI</button>
+            </div>
+          </form>
+        </div>
+        <div id="spPreviewPanel" style="display:none; padding:1.5rem;">
+          <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1rem;">
+            <button class="btn btn-sm" onclick="spShowCreate()">&larr; Volver</button>
+            <h3 style="margin:0; color:var(--brand-navy);">Vista Previa</h3>
+          </div>
+          <div id="spPreviewContent"></div>
+        </div>
+        <div id="spHistoryPanel" style="display:none; padding:1.5rem;">
+          <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1rem;">
+            <button class="btn btn-sm" onclick="spShowCreate(true)">&larr; Crear Nuevo</button>
+            <h3 style="margin:0; color:var(--brand-navy);">Historial de Posts</h3>
+          </div>
+          <div id="spHistoryList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gastos Tab (Administrator role only) -->
+    <div id="tab-gastos" style="display:none;">
+      <div class="table-container">
+        <div class="toolbar" style="display:flex; align-items:center; gap:1rem; flex-wrap:wrap;">
+          <h2 style="margin:0; color:var(--brand-navy); font-size:1.25rem;">&#128176; Gastos — Invoice Management</h2>
+          <div style="margin-left:auto; display:flex; gap:0.5rem; align-items:center;">
+            <select id="gastosStatusFilter" onchange="gastosLoadInvoices()" style="padding:0.4rem 0.6rem; border:1px solid var(--border); border-radius:6px; font-size:0.85rem;">
+              <option value="">All Status</option>
+              <option value="draft">Draft</option>
+              <option value="ready">Ready for Inc.</option>
+              <option value="submitted">Submitted</option>
+              <option value="verified">Verified</option>
+              <option value="error">Error</option>
+            </select>
+            <select id="gastosMonthFilter" onchange="gastosLoadInvoices()" style="padding:0.4rem 0.6rem; border:1px solid var(--border); border-radius:6px; font-size:0.85rem;">
+              <option value="">All Months</option>
+            </select>
+            <button class="btn btn-primary btn-sm" onclick="gastosShowUpload()">&#128228; Upload Invoice</button>
+            <button class="btn btn-sm" onclick="gastosShowManual()">+ Manual Entry</button>
+            <button class="btn btn-sm" onclick="gastosShowBookmarklet()">&#128279; Bookmarklet</button>
+            <button class="btn btn-sm" onclick="gastosExport()">&#128229; Export CSV</button>
+            <button class="btn btn-sm" onclick="gastosExportReceipts()" title="Export Receipts as PDF">&#128206; Export Receipts PDF</button>
+          </div>
+        </div>
+        <div id="gastosStats" style="display:grid; grid-template-columns:repeat(5,1fr); gap:0.75rem; padding:1rem 1.5rem; background:#f8f9fa; border-bottom:1px solid var(--border);">
+          <div style="text-align:center;"><div style="font-size:1.5rem; font-weight:700; color:var(--brand-navy);" id="gStatDraft">0</div><div style="font-size:0.75rem; color:#666;">Drafts</div></div>
+          <div style="text-align:center;"><div style="font-size:1.5rem; font-weight:700; color:#e67e22;" id="gStatReady">0</div><div style="font-size:0.75rem; color:#666;">Ready</div></div>
+          <div style="text-align:center;"><div style="font-size:1.5rem; font-weight:700; color:#27ae60;" id="gStatSubmitted">0</div><div style="font-size:0.75rem; color:#666;">Submitted</div></div>
+          <div style="text-align:center;"><div style="font-size:1.5rem; font-weight:700; color:#2ecc71;" id="gStatVerified">0</div><div style="font-size:0.75rem; color:#666;">Verified</div></div>
+          <div style="text-align:center;"><div style="font-size:1.5rem; font-weight:700; color:var(--brand-red);" id="gStatTotal">$0</div><div style="font-size:0.75rem; color:#666;">Total (Month)</div></div>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="data-table" id="gastosTable">
+            <thead><tr><th>Status</th><th>Supplier</th><th>Invoice #</th><th>Date</th><th>Lines</th><th>Total</th><th>Payment ID</th><th>Created</th><th>Actions</th></tr></thead>
+            <tbody id="gastosTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gastos Modals (shared with admin) -->
+    <div id="gastosUploadModal" class="modal-overlay hidden">
+      <div class="modal" style="max-width:700px;">
+        <h2>&#128228; Upload Invoice</h2>
+        <p style="font-size:0.85rem; color:#666; margin-bottom:1rem;">Upload a photo or PDF of an invoice. AI will extract the data automatically.</p>
+        <form id="gastosUploadForm" onsubmit="event.preventDefault(); gastosUploadInvoice();">
+          <div class="form-group"><label for="gastosFile">Invoice File (JPG, PNG, PDF)</label><input type="file" id="gastosFile" accept="image/*,.pdf" required multiple style="padding:0.5rem;"></div>
+          <div id="gastosUploadProgress" style="display:none; padding:1rem; text-align:center;"><div style="font-size:1.2rem; margin-bottom:0.5rem;">&#129302; Analyzing invoice...</div><div style="font-size:0.85rem; color:#666;">Claude Vision is reading the document</div></div>
+          <div class="modal-actions"><button type="button" class="btn" onclick="gastosCloseUpload()">Cancel</button><button type="submit" class="btn btn-primary" id="gastosUploadBtn">Upload & Analyze</button></div>
+        </form>
+      </div>
+    </div>
+    <div id="gastosReviewModal" class="modal-overlay hidden">
+      <div class="modal" style="max-width:850px; max-height:90vh; overflow-y:auto;">
+        <h2>&#9989; Review Extracted Data</h2>
+        <p style="font-size:0.85rem; color:#666; margin-bottom:1rem;">AI extracted the following. Please review and correct before saving.</p>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
+          <div class="form-group"><label>Supplier</label><select id="gastosReviewSupplier" style="width:100%; padding:0.5rem; border:1px solid var(--border); border-radius:6px;"></select></div>
+          <div class="form-group"><label>Invoice Number</label><input type="text" id="gastosReviewInvNum" style="width:100%;"></div>
+          <div class="form-group"><label>Invoice Date</label><input type="date" id="gastosReviewInvDate" style="width:100%;"></div>
+          <div class="form-group"><label>Payment Month</label><input type="month" id="gastosReviewPeriod" style="width:100%;"></div>
+        </div>
+        <h3 style="font-size:1rem; color:var(--brand-navy); margin-bottom:0.5rem;">Line Items</h3>
+        <div id="gastosReviewLines" style="margin-bottom:1rem;"></div>
+        <button type="button" class="btn btn-sm" onclick="gastosAddReviewLine()" style="margin-bottom:1rem;">+ Add Line</button>
+        <div style="text-align:right; font-size:1.1rem; font-weight:700; color:var(--brand-navy); margin-bottom:1rem;">Total: $<span id="gastosReviewTotal">0.00</span></div>
+        <div class="modal-actions"><button type="button" class="btn" onclick="gastosCloseReview()">Cancel</button><button type="button" class="btn btn-primary" onclick="gastosSaveReview()">Save Invoice</button></div>
+      </div>
+    </div>
+    <div id="gastosManualModal" class="modal-overlay hidden">
+      <div class="modal" style="max-width:750px; max-height:90vh; overflow-y:auto;">
+        <h2>&#128221; Manual Invoice Entry</h2>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
+          <div class="form-group"><label>Supplier</label><select id="gastosManualSupplier" style="width:100%; padding:0.5rem; border:1px solid var(--border); border-radius:6px;"></select></div>
+          <div class="form-group"><label>Invoice Number</label><input type="text" id="gastosManualInvNum" required style="width:100%;"></div>
+          <div class="form-group"><label>Invoice Date</label><input type="date" id="gastosManualInvDate" required style="width:100%;"></div>
+          <div class="form-group"><label>Payment Date</label><input type="date" id="gastosManualPayDate" style="width:100%;"></div>
+          <div class="form-group"><label>Payment Month</label><input type="month" id="gastosManualPeriod" style="width:100%;"></div>
+          <div class="form-group"><label>Currency</label><select id="gastosManualCurrency" style="width:100%; padding:0.5rem; border:1px solid var(--border); border-radius:6px;"><option value="USD">USD</option></select></div>
+        </div>
+        <h3 style="font-size:1rem; color:var(--brand-navy); margin-bottom:0.5rem;">Line Items</h3>
+        <div id="gastosManualLines"></div>
+        <button type="button" class="btn btn-sm" onclick="gastosAddManualLine()" style="margin-bottom:1rem;">+ Add Line</button>
+        <div style="text-align:right; font-size:1.1rem; font-weight:700; color:var(--brand-navy); margin-bottom:1rem;">Total: $<span id="gastosManualTotal">0.00</span></div>
+        <div class="modal-actions"><button type="button" class="btn" onclick="gastosCloseManual()">Cancel</button><button type="button" class="btn btn-primary" onclick="gastosSaveManual()">Save Invoice</button></div>
+      </div>
+    </div>
+    <div id="gastosDetailModal" class="modal-overlay hidden">
+      <div class="modal" style="max-width:800px; max-height:90vh; overflow-y:auto;">
+        <h2 id="gastosDetailTitle">Invoice Details</h2>
+        <div id="gastosDetailContent"></div>
+        <div class="modal-actions"><button type="button" class="btn" onclick="gastosCloseDetail()">Close</button></div>
+      </div>
+    </div>
+    <div id="gastosBookmarkletModal" class="modal-overlay hidden">
+      <div class="modal" style="max-width:650px;">
+        <h2>&#128279; Inc. Auto-Filler Bookmarklet</h2>
+        <p style="font-size:0.85rem; color:#666; margin-bottom:1rem;">Drag the button below to your bookmarks bar. When you're on the Inc. expense website, click it to auto-fill invoice data.</p>
+        <div style="text-align:center; padding:2rem; background:#f0f4f8; border-radius:12px; margin-bottom:1rem;">
+          <a id="gastosBookmarkletLink" href="#" style="display:inline-block; padding:12px 24px; background:var(--brand-red); color:white; font-weight:700; border-radius:8px; text-decoration:none; font-size:1rem; cursor:grab;" draggable="true">&#128176; Fill from Gastos</a>
+          <p style="font-size:0.8rem; color:#999; margin-top:0.75rem;">Drag this to your bookmarks bar</p>
+        </div>
+        <div style="background:#fffdf0; border:1px solid #f0e6b2; border-radius:8px; padding:1rem; font-size:0.85rem;">
+          <strong>How to use:</strong>
+          <ol style="margin:0.5rem 0 0 1.2rem; padding:0;">
+            <li>Go to backoffice.cfahome.com and log in</li>
+            <li>Select the Supplier and Month, click "Add Invoice"</li>
+            <li>Click the "Fill from Gastos" bookmark</li>
+            <li>It auto-fills the form fields from your next ready invoice</li>
+            <li>Review and click Save</li>
+          </ol>
+        </div>
+        <div class="modal-actions" style="margin-top:1rem;"><button type="button" class="btn" onclick="gastosCloseBookmarklet()">Close</button></div>
+      </div>
+    </div>
+
   </div>
 
+    <!-- My Apprenticeship Tab (visible to enrolled apprentices) -->
+    <div id="tab-my-apprenticeship" style="display:none;">
+      <div class="table-container" style="padding:1.5rem;">
+        <h2 style="color:var(--brand-navy); margin-bottom:1rem;">&#127891; My Apprenticeship</h2>
+        <div id="myApprContent"><p style="color:#999; text-align:center; padding:2rem;">Loading...</p></div>
+      </div>
+    </div>
+
+    <!-- Apprentice Sign-offs Tab (visible to Directors/journeyworkers) -->
+    <div id="tab-appr-signoffs" style="display:none;">
+      <div class="table-container" style="padding:1.5rem;">
+        <h2 style="color:var(--brand-navy); margin-bottom:1rem;">&#9998; Apprentice Sign-offs</h2>
+        <p style="font-size:0.85rem; color:#666; margin-bottom:1rem;">Pending task sign-offs for apprentices you supervise.</p>
+        <div id="apprSignoffsContent"><p style="color:#999; text-align:center; padding:2rem;">Loading...</p></div>
+      </div>
+    </div>
+
+    <!-- Apprenticeship Admin Tab (for Instructors) -->
+    <div id="tab-apprenticeship-admin" style="display:none;">
+      <div style="display:flex; gap:0.5rem; padding:0.75rem 1.5rem; background:#f8f9fa; border-bottom:1px solid var(--border); flex-wrap:wrap; align-items:center;">
+        <button class="btn btn-sm appr-sub-btn active" data-appr-sub="appr-dashboard" onclick="apprSwitchSub('appr-dashboard')">&#128202; Dashboard</button>
+        <button class="btn btn-sm appr-sub-btn" data-appr-sub="appr-detail" onclick="apprSwitchSub('appr-detail')">&#128196; Enrollment Detail</button>
+        <button class="btn btn-sm appr-sub-btn" data-appr-sub="appr-timesheet" onclick="apprSwitchSub('appr-timesheet')">&#128228; Timesheet Import</button>
+        <button class="btn btn-sm appr-sub-btn" data-appr-sub="appr-compliance" onclick="apprSwitchSub('appr-compliance')">&#9888;&#65039; Compliance</button>
+        <div style="margin-left:auto; display:flex; gap:0.5rem;">
+          <button class="btn btn-sm" onclick="apprExportRAPIDS()">&#128229; RAPIDS Export</button>
+          <button class="btn btn-sm btn-primary" onclick="apprShowNewEnrollment()">+ New Enrollment</button>
+        </div>
+      </div>
+      <div id="appr-dashboard" class="appr-sub-tab">
+        <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:0.75rem; padding:1rem 1.5rem; background:#f8f9fa; border-bottom:1px solid var(--border);">
+          <div style="text-align:center;">
+            <div style="font-size:1.5rem; font-weight:700; color:var(--brand-navy);" id="apprStatActive">0</div>
+            <div style="font-size:0.75rem; color:#666;">Active Apprentices</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:1.5rem; font-weight:700; color:#27ae60;" id="apprStatCompleted">0</div>
+            <div style="font-size:0.75rem; color:#666;">Completed</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:1.5rem; font-weight:700; color:var(--brand-red);" id="apprStatOverdue">0</div>
+            <div style="font-size:0.75rem; color:#666;">Overdue Events</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:1.5rem; font-weight:700; color:#f39c12;" id="apprStatUpcoming">0</div>
+            <div style="font-size:0.75rem; color:#666;">Upcoming (30d)</div>
+          </div>
+        </div>
+        <div id="apprDashContent" class="table-container">
+          <div style="overflow-x:auto;">
+            <table class="data-table">
+              <thead><tr>
+                <th>Apprentice</th><th>Track</th><th>Status</th><th>Start</th><th>OJL Progress</th><th>RI Progress</th><th>End Date</th><th>Actions</th>
+              </tr></thead>
+              <tbody id="apprEnrollBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div id="appr-detail" class="appr-sub-tab" style="display:none;">
+        <div id="apprDetailContent" style="padding:1.5rem;">
+          <p style="color:#999; text-align:center; padding:2rem;">Select an enrollment from the Dashboard to view details.</p>
+        </div>
+      </div>
+      <div id="appr-timesheet" class="appr-sub-tab" style="display:none;">
+        <div style="padding:1.5rem; max-width:700px;">
+          <h3 style="color:var(--brand-navy); margin-bottom:1rem;">&#128228; Import Timesheet (OJL Hours)</h3>
+          <p style="font-size:0.85rem; color:#666; margin-bottom:1.5rem;">Upload a PDF timesheet. AI will extract the period dates and total hours automatically.</p>
+          <form id="apprTimesheetForm" onsubmit="event.preventDefault(); apprUploadTimesheet();">
+            <div class="form-group">
+              <label>Enrollment *</label>
+              <select id="apprTimesheetEnrollmentId" required style="width:100%; padding:0.5rem; border:1px solid var(--border); border-radius:6px;">
+                <option value="">Select enrollment...</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Timesheet File (PDF) *</label>
+              <input type="file" id="apprTimesheetFile" accept=".pdf,application/pdf" required style="padding:0.5rem;">
+            </div>
+            <button type="submit" class="btn btn-primary" id="apprTimesheetBtn">Upload &amp; Process</button>
+          </form>
+          <div id="apprOCRResult" style="display:none;"></div>
+        </div>
+      </div>
+      <div id="appr-compliance" class="appr-sub-tab" style="display:none;">
+        <div id="apprComplianceContent" style="padding:1.5rem;">
+          <p style="color:#999; text-align:center; padding:2rem;">Loading compliance data...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Apprenticeship Modal (reusable for employee page) -->
+    <div id="apprNewModal" class="modal-overlay hidden"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="/js/scorecard.js"></script>
+  <script src="/js/social-posts.js?v=24"></script>
+  <script src="/js/gastos.js?v=14"></script>
+  <script src="/js/apprenticeship.js?v=3"></script>
   <script>
     let currentUser = null;
     let vacBalance = 0;
@@ -174,13 +989,13 @@
     const SICK_CAP = 15;
     const monthNames = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-    // Mobile menu
-    function toggleMobileMenu() {
-      document.querySelector('.header-actions').classList.toggle('mobile-open');
+    // User menu dropdown
+    function toggleUserMenu() {
+      document.getElementById('userMenuDropdown').classList.toggle('open');
     }
     document.addEventListener('click', (e) => {
-      if (!e.target.closest('.header-actions') && !e.target.closest('.hamburger-btn')) {
-        document.querySelector('.header-actions')?.classList.remove('mobile-open');
+      if (!e.target.closest('.user-menu-wrapper')) {
+        document.getElementById('userMenuDropdown')?.classList.remove('open');
       }
     });
 
@@ -195,6 +1010,56 @@
           document.querySelector('.main-content').innerHTML = '<p style="padding:2rem; text-align:center;">No employee profile linked to your account. Please contact HR.</p>';
           return;
         }
+        // Show Director review management tab
+        if (['Director', 'Senior Director', 'Shift Leader'].includes(currentUser.employeeRole)) {
+          document.getElementById('manageReviewsTab').style.display = '';
+        }
+        // Show A&C submission tab for Trainers/Directors/Shift Leaders
+        if (['Trainer', 'Director', 'Senior Director', 'Shift Leader'].includes(currentUser.employeeRole)) {
+          document.getElementById('acSubmitTab').style.display = '';
+        }
+        // Show My A&C Evals tab for FOH employees
+        if (currentUser.department === 'FOH' || currentUser.department === 'BOH/FOH') {
+          document.getElementById('myACEvalsTab').style.display = '';
+        }
+        // Show Leadership Academy tab for enrolled candidates
+        try {
+          const laRes = await fetch('/api/leadership-academy/my-dashboard');
+          if (laRes.ok) document.getElementById('leadershipTab').style.display = '';
+        } catch {}
+        // Show Apprenticeship Admin tab for Instructors
+        if (currentUser.employeeRole === 'Instructor') {
+          document.getElementById('apprAdminTab').style.display = '';
+          // Also show Leadership Academy for Instructor
+          document.getElementById('leadershipTab').style.display = '';
+        }
+        // Show Executive Scorecard tab for Directors and Senior Directors
+        if (['Director', 'Senior Director'].includes(currentUser.employeeRole)) {
+          document.getElementById('scorecardTab').style.display = '';
+          document.getElementById('socialPostsTab').style.display = '';
+        }
+        // Show Gastos tab for Administrator role employees
+        if (currentUser.employeeRole === 'Administrator') {
+          var gastosTab = document.getElementById('gastosTab');
+          if (gastosTab) gastosTab.style.display = '';
+        }
+        // Show Apprenticeship tabs
+        try {
+          var apprRes = await fetch('/api/apprenticeship/self/my-dashboard');
+          if (apprRes.ok) {
+            var apprData = await apprRes.json();
+            if (apprData.enrollment) {
+              document.getElementById('myApprTab').style.display = '';
+            }
+            if (apprData.signoff_queue && apprData.signoff_queue.length > 0) {
+              document.getElementById('apprSignoffsTab').style.display = '';
+            }
+          }
+        } catch(ex) {}
+        // Directors/Senior Directors always see sign-offs tab
+        if (['Director', 'Senior Director', 'Shift Leader'].includes(currentUser.employeeRole)) {
+          document.getElementById('apprSignoffsTab').style.display = '';
+        }
         loadData();
       } catch { window.location.href = '/login.html'; }
     })();
@@ -203,6 +1068,104 @@
       const div = document.createElement('div');
       div.textContent = str;
       return div.innerHTML;
+    }
+
+    function formatDesc(str) {
+      if (!str) return '';
+      const escaped = esc(str);
+      // Check if it has bullet points (•)
+      if (escaped.includes('•')) {
+        const parts = escaped.split(/\n\n?/).filter(s => s.trim());
+        return parts.map(p => {
+          p = p.trim();
+          if (p.startsWith('•')) {
+            // Split bullet into title and body at the em-dash
+            const content = p.substring(1).trim();
+            const dashIdx = content.indexOf('—');
+            if (dashIdx > 0) {
+              const title = content.substring(0, dashIdx).trim();
+              const body = content.substring(dashIdx + 1).trim();
+              return '<div style="display:flex; gap:0.5rem; margin:0.5rem 0; padding:0.5rem 0.625rem; background:#fff; border:1px solid var(--border); border-radius:6px; border-left:3px solid var(--brand-red);">' +
+                '<div style="flex-shrink:0; color:var(--brand-red); font-size:0.875rem;">&#9679;</div>' +
+                '<div><strong style="color:var(--brand-navy); font-size:0.75rem;">' + title + '</strong>' +
+                '<div style="font-size:0.7rem; color:var(--text); margin-top:0.125rem; line-height:1.5;">' + body + '</div></div></div>';
+            }
+            return '<div style="display:flex; gap:0.5rem; margin:0.375rem 0; padding:0.375rem 0.5rem;"><span style="color:var(--brand-red);">&#9679;</span><span>' + content + '</span></div>';
+          }
+          return '<div style="margin-bottom:0.375rem;">' + p + '</div>';
+        }).join('');
+      }
+      // Regular description — just convert newlines
+      return escaped.replace(/\n/g, '<br>');
+    }
+
+    function makeSearchable(select, opts = {}) {
+      const placeholder = opts.placeholder || 'Search...';
+      const onChange = opts.onChange || (() => {});
+
+      // On mobile, use native select for better UX
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth <= 768;
+      if (isMobile) {
+        select.style.display = '';
+        select.style.width = '100%';
+        select.style.fontSize = '16px';
+        select.addEventListener('change', () => onChange(select.value));
+        return {
+          setValue(val) { select.value = val; },
+          refresh() {},
+          clear() { select.value = ''; }
+        };
+      }
+
+      select.style.display = 'none';
+      const wrapper = document.createElement('div');
+      wrapper.className = 'search-select';
+      select.parentNode.insertBefore(wrapper, select);
+      wrapper.appendChild(select);
+      const input = document.createElement('input');
+      input.type = 'text'; input.placeholder = placeholder; input.autocomplete = 'off';
+      wrapper.appendChild(input);
+      const list = document.createElement('div');
+      list.className = 'search-select-list';
+      wrapper.appendChild(list);
+      let selectedValue = select.value, highlighted = -1;
+      function getOptions() { return Array.from(select.options).filter(o => o.value); }
+      function render(filter = '') {
+        const options = getOptions();
+        const term = filter.toLowerCase();
+        const filtered = term ? options.filter(o => o.text.toLowerCase().includes(term)) : options;
+        if (!filtered.length) { list.innerHTML = '<div class="search-select-empty">No matches</div>'; return; }
+        list.innerHTML = filtered.map((o, i) => {
+          const sel = o.value === selectedValue ? ' selected' : '';
+          const hi = i === highlighted ? ' highlighted' : '';
+          return `<div class="search-select-option${sel}${hi}" data-value="${esc(o.value)}">${esc(o.text)}</div>`;
+        }).join('');
+        list.querySelectorAll('.search-select-option').forEach(el => {
+          el.addEventListener('mousedown', e => { e.preventDefault(); selectOption(el.dataset.value, el.textContent); });
+          el.addEventListener('touchend', e => { e.preventDefault(); selectOption(el.dataset.value, el.textContent); });
+        });
+      }
+      function selectOption(val, text) {
+        selectedValue = val; select.value = val; input.value = text;
+        list.classList.remove('open'); highlighted = -1;
+        onChange(val); select.dispatchEvent(new Event('change'));
+      }
+      function getDisplayText() { const opt = getOptions().find(o => o.value === selectedValue); return opt ? opt.text : ''; }
+      input.addEventListener('focus', () => { input.select(); render(input.value === getDisplayText() ? '' : input.value); list.classList.add('open'); });
+      input.addEventListener('input', () => { highlighted = -1; render(input.value); list.classList.add('open'); });
+      input.addEventListener('keydown', e => {
+        const items = list.querySelectorAll('.search-select-option');
+        if (e.key === 'ArrowDown') { e.preventDefault(); highlighted = Math.min(highlighted + 1, items.length - 1); items.forEach((el, i) => el.classList.toggle('highlighted', i === highlighted)); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); highlighted = Math.max(highlighted - 1, 0); items.forEach((el, i) => el.classList.toggle('highlighted', i === highlighted)); }
+        else if (e.key === 'Enter') { e.preventDefault(); if (highlighted >= 0 && items[highlighted]) selectOption(items[highlighted].dataset.value, items[highlighted].textContent); }
+        else if (e.key === 'Escape') { list.classList.remove('open'); input.value = getDisplayText(); }
+      });
+      input.addEventListener('blur', () => { setTimeout(() => { list.classList.remove('open'); input.value = getDisplayText(); }, 300); });
+      return {
+        setValue(val) { selectedValue = val; select.value = val; input.value = getDisplayText(); },
+        refresh() { input.value = getDisplayText(); },
+        clear() { selectedValue = ''; select.value = ''; input.value = ''; }
+      };
     }
 
     async function loadData() {
@@ -445,18 +1408,1659 @@
       else { alert('Error: ' + data.error); }
     }
 
+    // ── Performance Reviews ──────────────────────────────────────────
+    let empReviews = [];
+    let perfChart = null;
+
+    function getPerfCatLabels() {
+      const isBoh = currentUser && (currentUser.department === 'BOH');
+      const isTrainer = currentUser && (currentUser.employeeRole === 'Trainer');
+      return [
+        { key: 'operations',      es: isTrainer ? 'Aplica su Dominio en la Operación para Enseñar Efectivamente' : 'Conoce y Ejecuta la Operación', en: isTrainer ? 'Training Effectiveness' : 'Operations' },
+        { key: 'cfa_values',      es: 'Vive los Valores de CFA',                en: 'CFA Values' },
+        { key: 'communication',   es: 'Se Comunica con Claridad',               en: 'Communication' },
+        { key: 'guest_obsession', es: isBoh ? 'Diligencia y Sentido de Urgencia' : 'Obsesión por el Invitado', en: isBoh ? 'Order completion urgency' : 'Guest Obsession' },
+        { key: 'responsibility',  es: 'Demuestra Responsabilidad',              en: 'Responsibility' },
+        { key: 'culture',         es: 'Protege la Cultura y Actitud Positiva',  en: 'Culture' }
+      ];
+    }
+    const SCORE_NAMES = { 1: 'Necesita Mejorar Urgente', 2: 'Necesita Mejorar', 3: 'Consistente', 4: 'Alto Desempeño', 5: 'Modelo a Seguir' };
+
+    function scoreColor(v) {
+      if (v <= 2) return '#E51636';
+      if (v <= 3) return '#eab308';
+      return '#22c55e';
+    }
+
+    async function loadEmployeeReviews() {
+      if (!currentUser?.employeeId) return;
+      try {
+        const res = await fetch(`/api/performance-reviews/employee/${currentUser.employeeId}`);
+        empReviews = await res.json();
+      } catch { empReviews = []; }
+      renderReviewsTab();
+    }
+
+    function renderReviewsTab() {
+      const container = document.getElementById('reviewsContent');
+      if (!empReviews.length) {
+        container.innerHTML = '<p style="text-align:center; color:var(--text-light); padding:2rem;">No performance reviews available yet.</p>';
+        return;
+      }
+
+      // Quarter toggle pills
+      const pills = empReviews.map((r, i) => {
+        const active = i === empReviews.length - 1 ? 'active' : '';
+        return `<button class="quarter-pill ${active}" onclick="showQuarterReview(${i})" data-idx="${i}">Q${r.quarter} ${r.year}</button>`;
+      }).join('');
+
+      container.innerHTML = `
+        <div class="quarter-pills">${pills}</div>
+        <div id="reviewDetail"></div>
+
+        <div class="detail-panel" style="margin-top:1.5rem; padding:1rem;">
+          <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="document.getElementById('empLegendBody').style.display = document.getElementById('empLegendBody').style.display === 'none' ? '' : 'none'; this.querySelector('.toggle-arrow').textContent = document.getElementById('empLegendBody').style.display === 'none' ? '\u25B6' : '\u25BC';">
+            <h3 style="margin:0; color:var(--brand-navy); font-size:0.9375rem;">Evaluation Rubric &amp; Legend</h3>
+            <span class="toggle-arrow" style="font-size:1rem; color:var(--brand-navy);">\u25B6</span>
+          </div>
+          <div id="empLegendBody" style="display:none; margin-top:1rem;">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.25rem;">
+              <div>
+                <h4 style="color:var(--brand-navy); font-size:0.8125rem; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.5rem;">Rating Scale</h4>
+                <div class="perf-legend-items">
+                  <div class="perf-legend-item"><span class="perf-score-badge score-red">1</span><div><strong>Necesita Mejorar Urgente</strong><br><small>Inconsistent execution; requires frequent reminders or corrections.</small></div></div>
+                  <div class="perf-legend-item"><span class="perf-score-badge score-red">2</span><div><strong>Necesita Mejorar</strong><br><small>Understands expectations but needs coaching to apply them consistently.</small></div></div>
+                  <div class="perf-legend-item"><span class="perf-score-badge score-yellow">3</span><div><strong>Consistente</strong><br><small>Meets expectations independently and reliably.</small></div></div>
+                  <div class="perf-legend-item"><span class="perf-score-badge score-green">4</span><div><strong>Alto Desempeño</strong><br><small>Exceeds expectations and positively influences others.</small></div></div>
+                  <div class="perf-legend-item"><span class="perf-score-badge score-green">5</span><div><strong>Modelo a Seguir</strong><br><small>Sets the standard; others learn by observing their example.</small></div></div>
+                </div>
+              </div>
+              <div>
+                <h4 style="color:var(--brand-navy); font-size:0.8125rem; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.5rem;">Categories</h4>
+                <div class="perf-legend-items">
+                  <div class="perf-legend-item"><strong>Conoce y Ejecuta la Operación</strong><br><small>Operations knowledge and execution</small></div>
+                  <div class="perf-legend-item"><strong>Vive los Valores de CFA</strong><br><small>Lives CFA core values</small></div>
+                  <div class="perf-legend-item"><strong>Se Comunica con Claridad</strong><br><small>Clear and effective communication</small></div>
+                  <div class="perf-legend-item"><strong>${currentUser.department === 'BOH' ? 'Diligencia y Sentido de Urgencia' : 'Obsesión por el Invitado'}</strong><br><small>${currentUser.department === 'BOH' ? 'Order completion urgency' : 'Guest obsession and service excellence'}</small></div>
+                  <div class="perf-legend-item"><strong>Demuestra Responsabilidad</strong><br><small>Accountability and reliability</small></div>
+                  <div class="perf-legend-item"><strong>Protege la Cultura y Actitud Positiva</strong><br><small>Protects culture and positive attitude</small></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:1.5rem;">
+          <h3 style="color:var(--brand-navy); margin-bottom:0.75rem;">Progress Over Time</h3>
+          <div style="position:relative; max-width:800px; height:350px;">
+            <canvas id="perfProgressChart"></canvas>
+          </div>
+        </div>
+      `;
+
+      showQuarterReview(empReviews.length - 1);
+      renderProgressChart();
+    }
+
+    async function showQuarterReview(idx) {
+      const r = empReviews[idx];
+      if (!r) return;
+
+      // Update pill active state
+      document.querySelectorAll('.quarter-pill').forEach(p => p.classList.remove('active'));
+      document.querySelector(`.quarter-pill[data-idx="${idx}"]`)?.classList.add('active');
+
+      // Fetch team averages for this quarter
+      let teamAvg = {};
+      try {
+        teamAvg = await (await fetch(`/api/performance-reviews/team-averages?year=${r.year}&quarter=${r.quarter}`)).json();
+      } catch {}
+
+      const dept = currentUser.department || 'FOH';
+      const deptAvg = teamAvg[dept] || teamAvg.all || {};
+      const allAvg = teamAvg.all || {};
+
+      const avg = r.average;
+      const overall = r.overall_override != null ? r.overall_override : avg;
+
+      let html = '<div class="perf-review-card">';
+      html += `<div class="perf-review-header">
+        <h3>Q${r.quarter} ${r.year} Performance Review</h3>
+        <div class="perf-overall">
+          <span class="perf-overall-label">Overall Score</span>
+          <span class="perf-overall-value" style="color:${scoreColor(overall)}">${overall.toFixed(2)}</span>
+        </div>
+      </div>`;
+
+      html += '<div class="perf-scores-display">';
+      getPerfCatLabels().forEach(cat => {
+        const val = r[cat.key];
+        const pct = (val / 5) * 100;
+        const deptVal = deptAvg[cat.key] || 0;
+        const allVal = allAvg[cat.key] || 0;
+        const deptPct = (deptVal / 5) * 100;
+        const diff = val - deptVal;
+        const diffSign = diff > 0 ? '+' : '';
+        const diffColor = diff > 0 ? '#22c55e' : diff < 0 ? '#E51636' : '#666';
+        html += `
+          <div class="perf-score-item">
+            <div class="perf-score-label">
+              <span class="perf-score-es">${esc(cat.es)}</span>
+              <span class="perf-score-en">${esc(cat.en)}</span>
+            </div>
+            <div class="perf-score-bar-container" style="position:relative;">
+              <div class="perf-score-bar" style="width:${pct}%; background:${scoreColor(val)};"></div>
+              ${deptVal ? `<div style="position:absolute; left:${deptPct}%; top:0; bottom:0; width:2px; background:#004F71; opacity:0.6;" title="${dept} Team Avg: ${deptVal}"></div>` : ''}
+            </div>
+            <div class="perf-score-value" style="color:${scoreColor(val)}">
+              ${val} <small>${SCORE_NAMES[val]}</small>
+              ${deptVal ? `<div style="font-size:0.625rem; color:${diffColor}; margin-top:0.125rem;">${diffSign}${diff.toFixed(2)} vs ${dept} avg (${deptVal})</div>` : ''}
+            </div>
+          </div>
+        `;
+      });
+      html += '</div>';
+
+      // Team averages summary
+      const deptAvgOverall = deptAvg.count ? ((deptAvg.operations + deptAvg.cfa_values + deptAvg.communication + deptAvg.guest_obsession + deptAvg.responsibility + deptAvg.culture) / 6) : 0;
+      const allAvgOverall = allAvg.count ? ((allAvg.operations + allAvg.cfa_values + allAvg.communication + allAvg.guest_obsession + allAvg.responsibility + allAvg.culture) / 6) : 0;
+
+      html += `<div class="perf-avg-row" style="flex-wrap:wrap; gap:0.5rem;">
+        <span>Your Average: <strong style="color:${scoreColor(avg)}">${avg.toFixed(2)}</strong></span>
+        ${r.overall_override != null ? `<span>Manual Override: <strong style="color:${scoreColor(r.overall_override)}">${r.overall_override.toFixed(2)}</strong></span>` : ''}
+      </div>`;
+
+      if (deptAvg.count || allAvg.count) {
+        html += `<div style="display:flex; gap:1rem; flex-wrap:wrap; margin-top:0.5rem; padding:0.625rem 0.875rem; background:#f0f4f8; border-radius:6px; font-size:0.8125rem;">`;
+        if (deptAvg.count) {
+          html += `<span style="color:var(--brand-navy);">📊 <strong>${dept}</strong> Team Avg: <strong style="color:${scoreColor(deptAvgOverall)}">${deptAvgOverall.toFixed(2)}</strong> <small>(${deptAvg.count} reviews)</small></span>`;
+        }
+        if (allAvg.count && dept !== 'BOH/FOH') {
+          html += `<span style="color:#666;">📊 All Team Avg: <strong style="color:${scoreColor(allAvgOverall)}">${allAvgOverall.toFixed(2)}</strong> <small>(${allAvg.count} reviews)</small></span>`;
+        }
+        html += `</div>`;
+      }
+
+      if (r.comments) {
+        html += `<div class="perf-comments">
+          <h4>Comments / Coaching</h4>
+          <p>${esc(r.comments)}</p>
+        </div>`;
+      }
+
+      html += '</div>';
+      document.getElementById('reviewDetail').innerHTML = html;
+    }
+
+    function renderProgressChart() {
+      if (perfChart) { perfChart.destroy(); perfChart = null; }
+      const canvas = document.getElementById('perfProgressChart');
+      if (!canvas || empReviews.length === 0) return;
+
+      const labels = empReviews.map(r => `Q${r.quarter} ${r.year}`);
+      const colors = ['#E51636', '#004F71', '#f97316', '#22c55e', '#8b5cf6', '#06b6d4'];
+
+      const datasets = getPerfCatLabels().map((cat, i) => ({
+        label: cat.en,
+        data: empReviews.map(r => r[cat.key]),
+        borderColor: colors[i],
+        backgroundColor: colors[i] + '20',
+        tension: 0.3,
+        pointRadius: 5,
+        pointHoverRadius: 7,
+        borderWidth: 2
+      }));
+
+      // Add average line
+      datasets.push({
+        label: 'Average',
+        data: empReviews.map(r => r.average),
+        borderColor: '#000',
+        borderDash: [5, 5],
+        tension: 0.3,
+        pointRadius: 6,
+        pointHoverRadius: 8,
+        borderWidth: 2.5,
+        pointStyle: 'rectRot'
+      });
+
+      perfChart = new Chart(canvas, {
+        type: 'line',
+        data: { labels, datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              min: 0.5,
+              max: 5.5,
+              ticks: {
+                stepSize: 1,
+                callback: v => v >= 1 && v <= 5 ? v : ''
+              },
+              grid: { color: '#e2e8f0' }
+            },
+            x: { grid: { display: false } }
+          },
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: { usePointStyle: true, padding: 15, font: { size: 11 } }
+            },
+            tooltip: {
+              callbacks: {
+                label: ctx => {
+                  const val = ctx.parsed.y;
+                  const name = SCORE_NAMES[Math.round(val)] || '';
+                  return `${ctx.dataset.label}: ${val}${name ? ' – ' + name : ''}`;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
     function switchTab(tab) {
       document.querySelectorAll('[id^="tab-"]').forEach(el => el.style.display = 'none');
-      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-nav-item').forEach(el => el.classList.remove('active'));
       document.getElementById('tab-' + tab).style.display = '';
-      document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+      const activeBtn = document.querySelector(`.tab-nav-item[data-tab="${tab}"]`);
+      if (activeBtn) {
+        activeBtn.classList.add('active');
+      }
+      // Show balance cards only on accrual/time-off related tabs
+      const showBalances = ['history', 'timeoff', 'request', 'myrequests'].includes(tab);
+      document.getElementById('balances').style.display = showBalances ? '' : 'none';
+      // Save current tab to URL hash so refresh stays on same tab
+      window.location.hash = tab;
+      // Close mobile menu
+      document.querySelector('.tab-nav')?.classList.remove('open');
       if (tab === 'myrequests') loadMyRequests();
+      if (tab === 'reviews') loadEmployeeReviews();
+      if (tab === 'manage-reviews') dirLoadReviews();
+      if (tab === 'ac-submit') loadACSubmitTab();
+      if (tab === 'my-ac-evals') loadMyACEvals();
+      if (tab === 'leadership') loadMyLADashboard();
+      if (tab === 'scorecard') empLoadScorecard();
+      if (tab === 'social-posts') spInit();
+      if (tab === 'gastos') gastosInit();
+      if (tab === 'my-apprenticeship') empLoadMyApprenticeship();
+      if (tab === 'appr-signoffs') empLoadApprSignoffs();
+      if (tab === 'apprenticeship-admin' && typeof apprInit === 'function') apprInit();
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // APPRENTICESHIP — Employee Self-Service
+    // ═══════════════════════════════════════════════════════
+
+    async function empLoadMyApprenticeship() {
+      var el = document.getElementById('myApprContent');
+      try {
+        var res = await fetch('/api/apprenticeship/self/my-dashboard');
+        if (!res.ok) throw new Error('Failed to load');
+        var data = await res.json();
+        if (!data.enrollment) {
+          el.innerHTML = '<p style="color:#999; text-align:center; padding:2rem;">You are not currently enrolled in an apprenticeship program.</p>';
+          return;
+        }
+        var e = data.enrollment;
+        var p = data.progress;
+        var ojlPct = p.ojl_pct || 0;
+        var riPct = p.ri_pct || 0;
+        var taskPct = p.tasks_pct || 0;
+
+        el.innerHTML = `
+          <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:1rem; margin-bottom:1.5rem;">
+            <div style="background:#fff; border:1px solid var(--border); border-radius:8px; padding:1rem; text-align:center;">
+              <div style="font-size:0.75rem; color:#666;">Status</div>
+              <div style="font-size:1.2rem; font-weight:700; color:${e.status==='active'?'#27ae60':'#f39c12'}; text-transform:capitalize;">${esc(e.status)}</div>
+            </div>
+            <div style="background:#fff; border:1px solid var(--border); border-radius:8px; padding:1rem; text-align:center;">
+              <div style="font-size:0.75rem; color:#666;">OJL Hours</div>
+              <div style="font-size:1.2rem; font-weight:700; color:var(--brand-navy);">${p.ojl_hours}/${p.ojl_required}</div>
+              <div style="background:#e9ecef; border-radius:4px; height:6px; margin-top:4px;"><div style="background:${ojlPct>=100?'#27ae60':'var(--brand-navy)'}; height:100%; width:${Math.min(ojlPct,100)}%; border-radius:4px;"></div></div>
+            </div>
+            <div style="background:#fff; border:1px solid var(--border); border-radius:8px; padding:1rem; text-align:center;">
+              <div style="font-size:0.75rem; color:#666;">RI Hours</div>
+              <div style="font-size:1.2rem; font-weight:700; color:var(--brand-navy);">${p.ri_hours}/${p.ri_required}</div>
+              <div style="background:#e9ecef; border-radius:4px; height:6px; margin-top:4px;"><div style="background:${riPct>=100?'#27ae60':'var(--brand-navy)'}; height:100%; width:${Math.min(riPct,100)}%; border-radius:4px;"></div></div>
+            </div>
+            <div style="background:#fff; border:1px solid var(--border); border-radius:8px; padding:1rem; text-align:center;">
+              <div style="font-size:0.75rem; color:#666;">Tasks</div>
+              <div style="font-size:1.2rem; font-weight:700; color:var(--brand-navy);">${p.tasks_completed}/${p.tasks_total}</div>
+              <div style="background:#e9ecef; border-radius:4px; height:6px; margin-top:4px;"><div style="background:${taskPct>=100?'#27ae60':'var(--brand-navy)'}; height:100%; width:${Math.min(taskPct,100)}%; border-radius:4px;"></div></div>
+            </div>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem;">
+            <div style="background:#fff; border:1px solid var(--border); border-radius:8px; padding:1rem;">
+              <h3 style="color:var(--brand-navy); font-size:1rem; margin-bottom:0.75rem;">Program Details</h3>
+              <table style="width:100%; font-size:0.85rem;">
+                <tr><td style="padding:4px 0; color:#666;">Track</td><td style="font-weight:600;">${esc(e.track_title)}</td></tr>
+                <tr><td style="padding:4px 0; color:#666;">Start Date</td><td>${e.enrollment_date ? new Date(e.enrollment_date+'T00:00:00').toLocaleDateString() : '—'}</td></tr>
+                <tr><td style="padding:4px 0; color:#666;">Expected End</td><td>${e.expected_completion_date ? new Date(e.expected_completion_date+'T00:00:00').toLocaleDateString() : '—'}</td></tr>
+                <tr><td style="padding:4px 0; color:#666;">Wage Tier</td><td>Tier ${e.current_wage_tier}</td></tr>
+                <tr><td style="padding:4px 0; color:#666;">Journeyworker</td><td>${esc(e.journeyworker_name || '—')}</td></tr>
+              </table>
+            </div>
+            <div style="background:#fff; border:1px solid var(--border); border-radius:8px; padding:1rem;">
+              <h3 style="color:var(--brand-navy); font-size:1rem; margin-bottom:0.75rem;">RI Courses</h3>
+              ${data.courses && data.courses.length > 0 ?
+                data.courses.map(function(r) {
+                  return '<div style="display:flex; justify-content:space-between; font-size:0.85rem; padding:0.3rem 0; border-bottom:1px solid #f0f0f0;"><span>' + esc(r.title) + '</span><span style="font-weight:600;">' + (r.completed_hours||0) + '/' + r.required_hours + 'h</span></div>';
+                }).join('') :
+                '<p style="color:#999; font-size:0.85rem;">No RI courses assigned.</p>'}
+            </div>
+          </div>`;
+      } catch (ex) {
+        el.innerHTML = '<p style="color:var(--brand-red); padding:1rem;">Error loading apprenticeship data.</p>';
+      }
+    }
+
+    async function empLoadApprSignoffs() {
+      var el = document.getElementById('apprSignoffsContent');
+      try {
+        var res = await fetch('/api/apprenticeship/self/my-dashboard');
+        if (!res.ok) throw new Error('Failed to load');
+        var data = await res.json();
+        var queue = data.signoff_queue || [];
+        if (!queue.length) {
+          el.innerHTML = '<p style="color:#999; text-align:center; padding:2rem;">No pending sign-offs at this time.</p>';
+          return;
+        }
+        el.innerHTML = '<table class="data-table"><thead><tr><th>Apprentice</th><th>Track</th><th>Task</th><th>Category</th><th>Action</th></tr></thead><tbody>' +
+          queue.map(function(t) {
+            return '<tr><td>' + esc(t.employee_name||'') + '</td><td>' + esc(t.track_name||'') + '</td><td>' + esc(t.task_name||'') + '</td><td>' + esc(t.category||'') + '</td><td><button class="btn btn-sm btn-primary" onclick="empApprSignOff(' + t.enrollment_id + ',' + t.task_id + ')">Sign Off</button></td></tr>';
+          }).join('') + '</tbody></table>';
+      } catch (ex) {
+        el.innerHTML = '<p style="color:var(--brand-red); padding:1rem;">Error loading sign-off queue.</p>';
+      }
+    }
+
+    async function empApprSignOff(enrollmentId, taskId) {
+      if (!confirm('Sign off this task as completed?')) return;
+      try {
+        var res = await fetch('/api/apprenticeship/tasks/' + enrollmentId + '/' + taskId + '/complete', {
+          method: 'POST', headers: {'Content-Type':'application/json'}, body: '{}'
+        });
+        if (!res.ok) { var b = await res.json().catch(function(){return {};}); throw new Error(b.error || 'Failed'); }
+        empLoadApprSignoffs();
+      } catch (ex) { alert('Error: ' + ex.message); }
+    }
+
+    // On page load, restore tab from URL hash
+    window.addEventListener('load', function() {
+      var hash = window.location.hash.replace('#', '');
+      if (hash && document.getElementById('tab-' + hash)) {
+        setTimeout(function() { switchTab(hash); }, 100);
+      }
+    });
+
+    function toggleEmpTabMenu() {
+      document.querySelector('.tab-nav').classList.toggle('open');
+    }
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.tab-nav')) {
+        document.querySelector('.tab-nav')?.classList.remove('open');
+      }
+    });
+
+    // ── Director Review Management ──────────────────────────────────
+    const DIR_CATS = [
+      { id: 'dirPerfOperations', key: 'operations' },
+      { id: 'dirPerfCfaValues', key: 'cfa_values' },
+      { id: 'dirPerfCommunication', key: 'communication' },
+      { id: 'dirPerfGuestObsession', key: 'guest_obsession' },
+      { id: 'dirPerfResponsibility', key: 'responsibility' },
+      { id: 'dirPerfCulture', key: 'culture' }
+    ];
+    let dirReviewsData = [];
+    let dirEmployeesCache = [];
+    let dirSortCol = 'employee_name';
+    let dirSortDir = 'asc';
+    let dirEditingId = null;
+
+    function dirScoreClass(v) {
+      if (v <= 2) return 'score-red';
+      if (v <= 3) return 'score-yellow';
+      return 'score-green';
+    }
+
+    function toggleCatAccordion(header) {
+      const body = header.nextElementSibling;
+      const arrow = header.querySelector('.toggle-arrow');
+      body.classList.toggle('open');
+      arrow.textContent = body.classList.contains('open') ? '\u25BC' : '\u25B6';
+    }
+
+    function dirIsBoh() {
+      const empId = parseInt(document.getElementById('dirPerfEmployee').value, 10);
+      const emp = dirEmployeesCache.find(e => e.id === empId);
+      if (!emp) return false;
+      if (emp.department === 'BOH') return true;
+      if (emp.department === 'BOH/FOH') {
+        const toggle = document.getElementById('dirBohToggle');
+        return toggle && toggle.value === 'BOH';
+      }
+      return false;
+    }
+
+    function dirOnEmployeeChange() {
+      const empId = parseInt(document.getElementById('dirPerfEmployee').value, 10);
+      const emp = dirEmployeesCache.find(e => e.id === empId);
+      const isBoh = dirIsBoh();
+
+      document.getElementById('dirOpsFOH').style.display = isBoh ? 'none' : '';
+      document.getElementById('dirOpsBOH').style.display = isBoh ? '' : 'none';
+
+      const toggleRow = document.getElementById('dirBohFohToggleRow');
+      if (toggleRow) {
+        toggleRow.style.display = emp && emp.department === 'BOH/FOH' ? '' : 'none';
+      }
+
+      // Swap Guest Obsession label for BOH
+      const guestLabel = document.getElementById('dirGuestLabel');
+      if (guestLabel) {
+        guestLabel.innerHTML = isBoh
+          ? 'Diligencia y Sentido de Urgencia <small>Completar órdenes de invitados</small>'
+          : 'Obsesión por el Invitado <small>Guest Obsession</small>';
+      }
+
+      // Swap Operations label for Trainers
+      const opsLabel = document.getElementById('dirOpsLabel');
+      if (opsLabel) {
+        const isTrainer = emp && emp.role === 'Trainer';
+        opsLabel.innerHTML = isTrainer
+          ? 'Aplica su Dominio en la Operación para Enseñar Efectivamente <small>Training Effectiveness</small>'
+          : 'Conoce y Ejecuta la Operación <small>Operations</small>';
+      }
+
+      if (!isBoh) {
+        ['dirBohPrimaria','dirBohSecundaria','dirBohMaquinas','dirBohBreading','dirBohFileteo','dirBohPrep','dirBohDesayuno'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.value = '';
+        });
+      } else {
+        document.getElementById('dirPerfOperations').value = '';
+      }
+      dirUpdateAvg();
+    }
+
+    function dirUpdateBohAvg() {
+      const ids = ['dirBohPrimaria','dirBohSecundaria','dirBohMaquinas','dirBohBreading','dirBohFileteo','dirBohPrep','dirBohDesayuno'];
+      const vals = ids.map(id => parseInt(document.getElementById(id).value, 10)).filter(v => !isNaN(v));
+      const display = document.getElementById('dirBohOpsAvgDisplay');
+      if (vals.length === 7) {
+        display.textContent = `Avg: ${(vals.reduce((a,b) => a+b, 0) / 7).toFixed(2)}`;
+      } else {
+        display.textContent = `Avg: — (${vals.length}/7)`;
+      }
+    }
+
+    function dirUpdateAvg() {
+      const isBoh = dirIsBoh();
+      const vals = DIR_CATS.map(c => {
+        if (c.id === 'dirPerfOperations' && isBoh) {
+          const bohIds = ['dirBohPrimaria','dirBohSecundaria','dirBohMaquinas','dirBohBreading','dirBohFileteo','dirBohPrep','dirBohDesayuno'];
+          const bv = bohIds.map(id => parseInt(document.getElementById(id).value, 10)).filter(v => !isNaN(v));
+          if (bv.length === 7) return bv.reduce((a,b)=>a+b,0) / 7;
+          return NaN;
+        }
+        return parseInt(document.getElementById(c.id).value, 10);
+      }).filter(v => !isNaN(v));
+
+      const el = document.getElementById('dirPerfAutoAvg');
+      if (vals.length === 6) {
+        const avg = vals.reduce((s, v) => s + v, 0) / 6;
+        el.textContent = avg.toFixed(2);
+        el.className = 'perf-avg-display ' + dirScoreClass(avg);
+      } else {
+        el.textContent = `${vals.length}/6 scored`;
+        el.className = 'perf-avg-display';
+      }
+    }
+
+    async function dirLoadReviews() {
+      // Populate employee dropdown — filter by Director's department
+      try {
+        const myDept = currentUser.department || 'FOH';
+        let empUrl = '/api/employees?status=active';
+        // If Director is BOH/FOH, show all; otherwise filter by their dept
+        if (myDept !== 'BOH/FOH') {
+          empUrl += `&department=${encodeURIComponent(myDept)}`;
+        }
+        let employees = await (await fetch(empUrl)).json();
+        // Also include BOH/FOH employees for single-dept Directors
+        if (myDept !== 'BOH/FOH') {
+          const bothEmps = await (await fetch('/api/employees?status=active&department=BOH/FOH')).json();
+          employees = [...employees, ...bothEmps].sort((a, b) => a.full_name.localeCompare(b.full_name));
+        }
+        dirEmployeesCache = employees;
+        console.log('dirLoadReviews: loaded', employees.length, 'employees for dept', myDept);
+        const sel = document.getElementById('dirPerfEmployee');
+        sel.innerHTML = '<option value="">— Select employee —</option>' +
+          employees.map(e => `<option value="${e.id}">${e.first_name} ${e.last_name}</option>`).join('');
+        sel.style.display = '';
+        sel.style.width = '100%';
+        console.log('dirLoadReviews: select options count:', sel.options.length);
+        // Remove old searchable wrapper if it exists
+        if (window._dirPerfEmpSearch) {
+          const wrapper = sel.closest('.search-select');
+          if (wrapper) {
+            wrapper.parentNode.insertBefore(sel, wrapper);
+            wrapper.remove();
+          }
+          window._dirPerfEmpSearch = null;
+        }
+      } catch (err) { console.error('dirLoadReviews employee load error:', err); }
+
+      // Populate year dropdown
+      const yearSel = document.getElementById('dirPerfYear');
+      const filterYearSel = document.getElementById('dirFilterYear');
+      const currentYear = new Date().getFullYear();
+      if (yearSel.options.length <= 1) {
+        yearSel.innerHTML = '';
+        for (let y = currentYear; y >= 2026; y--) {
+          yearSel.innerHTML += `<option value="${y}">${y}</option>`;
+        }
+      }
+      if (filterYearSel.options.length <= 1) {
+        filterYearSel.innerHTML = '<option value="">All Years</option>';
+        for (let y = currentYear; y >= 2026; y--) {
+          filterYearSel.innerHTML += `<option value="${y}">${y}</option>`;
+        }
+      }
+
+      // Load reviews table — filter by Director's department
+      const year = document.getElementById('dirFilterYear').value;
+      const quarter = document.getElementById('dirFilterQuarter').value;
+      const dirDept = currentUser.department || 'FOH';
+      let url = '/api/performance-reviews?';
+      if (year) url += `year=${year}&`;
+      if (quarter) url += `quarter=${quarter}&`;
+      if (dirDept !== 'BOH/FOH') url += `department=${encodeURIComponent(dirDept)}&`;
+
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('Failed');
+        dirReviewsData = await res.json();
+        dirRenderTable();
+      } catch (err) {
+        console.error('Failed to load reviews:', err);
+      }
+    }
+
+    function dirSortBy(col) {
+      if (dirSortCol === col) {
+        dirSortDir = dirSortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        dirSortCol = col;
+        dirSortDir = col === 'employee_name' ? 'asc' : 'desc';
+      }
+      dirRenderTable();
+    }
+
+    function dirRenderTable() {
+      const tbody = document.getElementById('dirReviewsBody');
+      if (!dirReviewsData.length) {
+        tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; color:var(--text-light);">No reviews found</td></tr>';
+        return;
+      }
+
+      const sorted = [...dirReviewsData].sort((a, b) => {
+        let va, vb;
+        if (dirSortCol === 'average') { va = a.average; vb = b.average; }
+        else if (dirSortCol === 'overall') {
+          va = a.overall_override != null ? a.overall_override : a.average;
+          vb = b.overall_override != null ? b.overall_override : b.average;
+        } else if (dirSortCol === 'employee_name') {
+          va = (a.employee_name || '').toLowerCase();
+          vb = (b.employee_name || '').toLowerCase();
+        } else { va = a[dirSortCol] || 0; vb = b[dirSortCol] || 0; }
+        if (va < vb) return dirSortDir === 'asc' ? -1 : 1;
+        if (va > vb) return dirSortDir === 'asc' ? 1 : -1;
+        return 0;
+      });
+
+      document.querySelectorAll('#tab-manage-reviews th[data-dsort]').forEach(th => {
+        const arrow = th.dataset.dsort === dirSortCol ? (dirSortDir === 'asc' ? ' \u25B2' : ' \u25BC') : '';
+        th.querySelector('.sort-arrow').textContent = arrow;
+      });
+
+      tbody.innerHTML = sorted.map(r => {
+        const avg = r.average;
+        const overall = r.overall_override != null ? r.overall_override : avg;
+        const escapedComments = esc((r.comments || '').replace(/'/g, "\\'"));
+        return `
+          <tr>
+            <td data-label="Employee">${esc(r.employee_name)}</td>
+            <td data-label="Period">Q${r.quarter} ${r.year}</td>
+            <td data-label="OPS" class="text-center"><span class="perf-score-badge ${dirScoreClass(r.operations)}">${r.operations}</span></td>
+            <td data-label="VAL" class="text-center"><span class="perf-score-badge ${dirScoreClass(r.cfa_values)}">${r.cfa_values}</span></td>
+            <td data-label="COM" class="text-center"><span class="perf-score-badge ${dirScoreClass(r.communication)}">${r.communication}</span></td>
+            <td data-label="GST" class="text-center"><span class="perf-score-badge ${dirScoreClass(r.guest_obsession)}">${r.guest_obsession}</span></td>
+            <td data-label="RSP" class="text-center"><span class="perf-score-badge ${dirScoreClass(r.responsibility)}">${r.responsibility}</span></td>
+            <td data-label="CUL" class="text-center"><span class="perf-score-badge ${dirScoreClass(r.culture)}">${r.culture}</span></td>
+            <td data-label="Avg" class="text-center"><strong class="${dirScoreClass(avg)}">${avg.toFixed(2)}</strong></td>
+            <td data-label="Overall" class="text-center"><strong class="${dirScoreClass(overall)}">${overall.toFixed(2)}</strong></td>
+            <td>
+              <div style="display:flex; gap:0.25rem;">
+                <button class="btn btn-sm" onclick="dirEditReview(${r.id})">Edit</button>
+                <button class="btn btn-sm btn-danger" onclick="dirDeleteReview(${r.id})">Delete</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    async function dirSubmitReview(e) {
+      e.preventDefault();
+      const isBoh = dirIsBoh();
+      const body = {
+        employee_id: document.getElementById('dirPerfEmployee').value,
+        year: document.getElementById('dirPerfYear').value,
+        quarter: document.getElementById('dirPerfQuarter').value,
+        is_boh: isBoh,
+        operations: isBoh ? '3' : document.getElementById('dirPerfOperations').value,
+        cfa_values: document.getElementById('dirPerfCfaValues').value,
+        communication: document.getElementById('dirPerfCommunication').value,
+        guest_obsession: document.getElementById('dirPerfGuestObsession').value,
+        responsibility: document.getElementById('dirPerfResponsibility').value,
+        culture: document.getElementById('dirPerfCulture').value,
+        overall_override: document.getElementById('dirPerfOverride').value || null,
+        comments: document.getElementById('dirPerfComments').value
+      };
+      if (isBoh) {
+        body.boh_primaria = document.getElementById('dirBohPrimaria').value;
+        body.boh_secundaria = document.getElementById('dirBohSecundaria').value;
+        body.boh_maquinas = document.getElementById('dirBohMaquinas').value;
+        body.boh_breading = document.getElementById('dirBohBreading').value;
+        body.boh_fileteo = document.getElementById('dirBohFileteo').value;
+        body.boh_prep = document.getElementById('dirBohPrep').value;
+        body.boh_desayuno = document.getElementById('dirBohDesayuno').value;
+      }
+
+      try {
+        const res = await fetch('/api/performance-reviews', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        if (!res.ok) { const err = await res.json(); throw new Error(err.error); }
+        alert(dirEditingId ? 'Review updated!' : 'Review submitted!');
+        dirCancelEdit();
+        document.getElementById('dirPerfForm').reset();
+        dirUpdateAvg();
+        dirLoadReviews();
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    function dirEditReview(id) {
+      const r = dirReviewsData.find(rv => rv.id === id);
+      if (!r) return;
+      dirEditingId = id;
+      document.getElementById('dirPerfEmployee').value = r.employee_id;
+      dirOnEmployeeChange();
+      document.getElementById('dirPerfYear').value = r.year;
+      document.getElementById('dirPerfQuarter').value = r.quarter;
+      document.getElementById('dirPerfOperations').value = r.operations;
+      document.getElementById('dirPerfCfaValues').value = r.cfa_values;
+      document.getElementById('dirPerfCommunication').value = r.communication;
+      document.getElementById('dirPerfGuestObsession').value = r.guest_obsession;
+      document.getElementById('dirPerfResponsibility').value = r.responsibility;
+      document.getElementById('dirPerfCulture').value = r.culture;
+      document.getElementById('dirPerfOverride').value = r.overall_override != null ? r.overall_override : '';
+      document.getElementById('dirPerfComments').value = r.comments || '';
+
+      // Populate BOH subsections if present
+      if (r.boh_primaria != null) {
+        const toggle = document.getElementById('dirBohToggle');
+        if (toggle && document.getElementById('dirBohFohToggleRow').style.display !== 'none') {
+          toggle.value = 'BOH';
+          dirOnEmployeeChange();
+        }
+        document.getElementById('dirBohPrimaria').value = r.boh_primaria;
+        document.getElementById('dirBohSecundaria').value = r.boh_secundaria;
+        document.getElementById('dirBohMaquinas').value = r.boh_maquinas;
+        document.getElementById('dirBohBreading').value = r.boh_breading;
+        document.getElementById('dirBohFileteo').value = r.boh_fileteo;
+        document.getElementById('dirBohPrep').value = r.boh_prep;
+        document.getElementById('dirBohDesayuno').value = r.boh_desayuno;
+        dirUpdateBohAvg();
+      }
+
+      document.getElementById('dirPerfFormTitle').textContent = 'Edit Performance Review';
+      document.getElementById('dirPerfSubmitBtn').textContent = 'Update Review';
+      document.getElementById('dirPerfCancelEdit').style.display = '';
+      // Show form if collapsed
+      document.getElementById('dirPerfFormBody').style.display = '';
+      dirUpdateAvg();
+      document.getElementById('dirPerfForm').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function dirCancelEdit() {
+      dirEditingId = null;
+      document.getElementById('dirPerfFormTitle').textContent = 'Submit Performance Review';
+      document.getElementById('dirPerfSubmitBtn').textContent = 'Submit Review';
+      document.getElementById('dirPerfCancelEdit').style.display = 'none';
+    }
+
+    async function dirDeleteReview(id) {
+      if (!confirm('Delete this review? This cannot be undone.')) return;
+      try {
+        const res = await fetch(`/api/performance-reviews/${id}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Failed');
+        dirLoadReviews();
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    function dirExportReviews() {
+      window.location.href = '/api/performance-reviews/export';
+    }
+
+    function showChangePassword() {
+      document.getElementById('empChangePwModal').classList.remove('hidden');
+    }
+    function closeChangePw() {
+      document.getElementById('empChangePwModal').classList.add('hidden');
+    }
+    async function submitChangePw(e) {
+      e.preventDefault();
+      const current = document.getElementById('empCpCurrent').value;
+      const newPw = document.getElementById('empCpNew').value;
+      const confirm = document.getElementById('empCpConfirm').value;
+      if (newPw !== confirm) return alert('Passwords do not match');
+      if (newPw.length < 6) return alert('Password must be at least 6 characters');
+      try {
+        const res = await fetch('/api/auth/change-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ currentPassword: current, newPassword: newPw })
+        });
+        const data = await res.json();
+        if (data.success) { alert('Password changed successfully!'); closeChangePw(); document.getElementById('empChangePwForm').reset(); }
+        else alert(data.error || 'Failed to change password');
+      } catch { alert('Failed to change password'); }
     }
 
     async function logout() {
       await fetch('/api/auth/logout', { method: 'POST' });
       window.location.href = '/login.html';
     }
+
+    // ── A&C Evaluations (Trainer) ──────────────────────────────────────
+    let acCurrentType = 'order_taking';
+    let acEmployeesCache = [];
+
+    const AC_ORDER_TAKING = [
+      { key: 'warm_welcome', label: 'Warm Welcome' },
+      { key: 'eye_contact', label: 'Eye Contact' },
+      { key: 'smile', label: 'Smile' },
+      { key: 'friendly_tone', label: 'Friendly Tone' },
+      { key: 'my_pleasure', label: '"My Pleasure"' },
+      { key: 'asked_name', label: 'Asked guest their name' },
+      { key: 'how_may_i_serve', label: '"How may I serve you?"' },
+      { key: 'confirmed_order', label: 'Confirmed order (repeating order)' },
+      { key: 'clarifying_questions', label: 'Asked clarifying questions' },
+      { key: 'asked_sauces', label: 'Asked for sauces' },
+      { key: 'used_name_twice', label: "Used guest's name at least twice" },
+      { key: 'suggestive_selling', label: 'Suggestive selling / Upsold' },
+      { key: 'fond_farewell', label: 'Fond farewell' },
+      { key: 'moved_guest_forward', label: 'Moved guest forward in line' }
+    ];
+
+    const AC_MEAL_DELIVERY = [
+      { key: 'reflector_vest', label: 'Had reflector vest on' },
+      { key: 'warm_welcome', label: 'Warm Welcome — know name upon arrival' },
+      { key: 'eye_contact', label: 'Eye Contact' },
+      { key: 'smile', label: 'Smile' },
+      { key: 'friendly_tone', label: 'Friendly Tone' },
+      { key: 'my_pleasure', label: '"My Pleasure"' },
+      { key: 'asked_name', label: 'Asked guest their name' },
+      { key: 'moved_car_forward', label: 'Moved car forward if meal not ready' },
+      { key: 'verified_meal', label: 'Verified sauces and confirmed order' },
+      { key: 'fond_farewell', label: 'Fond farewell' },
+      { key: 'pull_out_right', label: 'If 2nd/3rd car, pull out on right' }
+    ];
+
+    function setACType(type, btn) {
+      acCurrentType = type;
+      document.querySelectorAll('.ac-type-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderACChecklist();
+    }
+
+    function renderACChecklist() {
+      const questions = acCurrentType === 'order_taking' ? AC_ORDER_TAKING : AC_MEAL_DELIVERY;
+      document.getElementById('acChecklist').innerHTML = `
+        <div class="ac-checklist-grid">
+          ${questions.map(q => `
+            <div class="ac-checklist-item" data-key="${q.key}">
+              <span class="ac-checklist-label">${q.label}</span>
+              <div class="ac-toggle-group">
+                <button type="button" class="ac-toggle-btn ac-yes" onclick="setACResponse(this, '${q.key}', 'yes')">Yes</button>
+                <button type="button" class="ac-toggle-btn ac-no" onclick="setACResponse(this, '${q.key}', 'no')">No</button>
+                <button type="button" class="ac-toggle-btn ac-na" onclick="setACResponse(this, '${q.key}', 'na')">N/A</button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+      updateACScore();
+    }
+
+    function setACResponse(btn, key, value) {
+      const group = btn.closest('.ac-toggle-group');
+      group.querySelectorAll('.ac-toggle-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      btn.closest('.ac-checklist-item').dataset.value = value;
+      updateACScore();
+    }
+
+    function updateACScore() {
+      const items = document.querySelectorAll('.ac-checklist-item[data-value]');
+      let yes = 0, no = 0;
+      items.forEach(item => {
+        if (item.dataset.value === 'yes') yes++;
+        else if (item.dataset.value === 'no') no++;
+      });
+      const total = yes + no;
+      const pct = total > 0 ? Math.round((yes / total) * 100) : 0;
+      const display = document.getElementById('acScoreDisplay');
+      if (total === 0) { display.textContent = '—'; display.style.color = 'var(--brand-navy)'; }
+      else {
+        display.textContent = pct + '%';
+        display.style.color = pct >= 80 ? '#22c55e' : pct >= 60 ? '#eab308' : '#E51636';
+      }
+    }
+
+    async function loadACSubmitTab() {
+      // Populate employee dropdown — FOH only, filtered by trainer's dept
+      try {
+        const res = await fetch('/api/employees?status=active');
+        const emps = await res.json();
+        acEmployeesCache = emps.filter(e => e.department === 'FOH' || e.department === 'BOH/FOH');
+
+        // If trainer is FOH, show only FOH; if BOH/FOH, show all FOH
+        if (currentUser.department === 'FOH') {
+          acEmployeesCache = acEmployeesCache.filter(e => e.department === 'FOH' || e.department === 'BOH/FOH');
+        }
+
+        const select = document.getElementById('acEmployee');
+        select.innerHTML = '<option value="">Select Employee</option>' +
+          acEmployeesCache.map(e => `<option value="${e.id}">${esc(e.first_name)} ${esc(e.last_name)}</option>`).join('');
+        select.style.fontSize = '16px';
+
+        renderACChecklist();
+        loadACTrainerTable();
+      } catch (err) {
+        console.error('Failed to load A&C submit tab:', err);
+      }
+    }
+
+    function onACEmployeeChange() {}
+
+    async function submitACEval(e) {
+      e.preventDefault();
+      const employeeId = document.getElementById('acEmployee').value;
+      if (!employeeId) { alert('Please select an employee'); return; }
+
+      const questions = acCurrentType === 'order_taking' ? AC_ORDER_TAKING : AC_MEAL_DELIVERY;
+      const items = document.querySelectorAll('.ac-checklist-item');
+      const responses = {};
+      let allAnswered = true;
+
+      items.forEach(item => {
+        const key = item.dataset.key;
+        const val = item.dataset.value;
+        if (!val) allAnswered = false;
+        responses[key] = val || 'na';
+      });
+
+      if (!allAnswered && !confirm('Some questions are unanswered (will default to N/A). Continue?')) return;
+
+      try {
+        const res = await fetch('/api/ac-evaluations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            employee_id: parseInt(employeeId),
+            eval_type: acCurrentType,
+            location: document.getElementById('acLocation').value,
+            responses,
+            comments: document.getElementById('acComments').value
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert(`Evaluation submitted! Score: ${data.score_pct}%`);
+          document.getElementById('acSubmitForm').reset();
+          renderACChecklist();
+          loadACTrainerTable();
+        } else {
+          alert('Error: ' + (data.error || 'Failed to submit'));
+        }
+      } catch (err) {
+        alert('Failed to submit evaluation');
+      }
+    }
+
+    async function loadACTrainerTable() {
+      try {
+        const res = await fetch(`/api/ac-evaluations?evaluator_id=${currentUser.employeeId}&days=30`);
+        const evals = await res.json();
+
+        document.getElementById('acTrainerTableBody').innerHTML = evals.length === 0
+          ? '<tr><td colspan="6" style="text-align:center; color:var(--text-light);">No evaluations submitted yet</td></tr>'
+          : evals.map(ev => {
+              const scoreClass = ev.score_pct >= 80 ? 'score-green' : ev.score_pct >= 60 ? 'score-yellow' : 'score-red';
+              return `<tr>
+                <td data-label="Date">${ev.eval_date}</td>
+                <td data-label="Employee">${ev.employee_name}</td>
+                <td data-label="Type">${ev.eval_type === 'order_taking' ? 'Order Taking' : 'Meal Delivery'}</td>
+                <td data-label="Location">${ev.location === 'front_counter' ? 'Front Counter' : 'Drive Thru'}</td>
+                <td data-label="Score" class="text-center"><span class="perf-score-badge ${scoreClass}">${Math.round(ev.score_pct)}%</span></td>
+                <td><button class="btn btn-sm btn-danger" onclick="deleteTrainerACEval(${ev.id})">Delete</button></td>
+              </tr>`;
+            }).join('');
+      } catch (err) {
+        console.error('Failed to load trainer table:', err);
+      }
+    }
+
+    async function deleteTrainerACEval(id) {
+      if (!confirm('Delete this evaluation?')) return;
+      try {
+        const res = await fetch(`/api/ac-evaluations/${id}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) {
+          loadACTrainerTable();
+        } else {
+          alert('Error: ' + (data.error || 'Failed to delete'));
+        }
+      } catch (err) {
+        alert('Failed to delete evaluation');
+      }
+    }
+
+    // ── My A&C Evals (Employee read-only) ────────────────────────────────
+    async function loadMyACEvals() {
+      if (!currentUser?.employeeId) return;
+      try {
+        const res = await fetch(`/api/ac-evaluations/employee/${currentUser.employeeId}`);
+        const evals = await res.json();
+
+        const container = document.getElementById('myACEvalsContent');
+
+        if (evals.length === 0) {
+          container.innerHTML = '<p style="text-align:center; color:var(--text-light); padding:2rem;">No hospitality evaluations yet.</p>';
+          return;
+        }
+
+        // Summary stats
+        const avgScore = Math.round(evals.reduce((s, e) => s + e.score_pct, 0) / evals.length);
+        const totalEvals = evals.length;
+
+        container.innerHTML = `
+          <div class="stats-grid" style="margin-bottom:1.5rem;">
+            <div class="stat-card"><div class="label">Total Evaluations</div><div class="value">${totalEvals}</div></div>
+            <div class="stat-card"><div class="label">Average Score</div><div class="value" style="color:${avgScore >= 80 ? '#22c55e' : avgScore >= 60 ? '#eab308' : '#E51636'};">${avgScore}%</div></div>
+          </div>
+
+          <div style="position:relative; max-width:600px; height:250px; margin-bottom:1.5rem;">
+            <canvas id="myACTrendChart"></canvas>
+          </div>
+
+          <div class="table-container">
+            <table class="responsive-table">
+              <thead>
+                <tr><th>Date</th><th>Evaluator</th><th>Type</th><th>Location</th><th class="text-center">Score</th><th></th></tr>
+              </thead>
+              <tbody>
+                ${evals.map(ev => {
+                  const scoreClass = ev.score_pct >= 80 ? 'score-green' : ev.score_pct >= 60 ? 'score-yellow' : 'score-red';
+                  return `<tr>
+                    <td data-label="Date">${ev.eval_date}</td>
+                    <td data-label="Evaluator">${ev.evaluator_name}</td>
+                    <td data-label="Type">${ev.eval_type === 'order_taking' ? 'Order Taking' : 'Meal Delivery'}</td>
+                    <td data-label="Location">${ev.location === 'front_counter' ? 'Front Counter' : 'Drive Thru'}</td>
+                    <td data-label="Score" class="text-center"><span class="perf-score-badge ${scoreClass}">${Math.round(ev.score_pct)}%</span></td>
+                    <td><button class="btn btn-sm" onclick="viewMyACEval(${ev.id})">View</button></td>
+                  </tr>`;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        `;
+
+        // Render mini trend chart
+        if (evals.length > 1) {
+          const sorted = [...evals].reverse();
+          new Chart(document.getElementById('myACTrendChart'), {
+            type: 'line',
+            data: {
+              labels: sorted.map(e => e.eval_date),
+              datasets: [{
+                label: 'Score %',
+                data: sorted.map(e => e.score_pct),
+                borderColor: '#004F71',
+                backgroundColor: 'rgba(0,79,113,0.1)',
+                fill: true,
+                tension: 0.3,
+                pointRadius: 4
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { display: false } },
+              scales: {
+                y: { min: 0, max: 100, ticks: { callback: v => v + '%' } },
+                x: { ticks: { maxTicksLimit: 8 } }
+              }
+            }
+          });
+        }
+      } catch (err) {
+        console.error('Failed to load my A&C evals:', err);
+      }
+    }
+
+    function viewMyACEval(id) {
+      fetch(`/api/ac-evaluations/employee/${currentUser.employeeId}`)
+        .then(r => r.json())
+        .then(evals => {
+          const ev = evals.find(e => e.id === id);
+          if (!ev) return;
+          const resp = JSON.parse(ev.responses);
+          const questions = ev.eval_type === 'order_taking' ? AC_ORDER_TAKING : AC_MEAL_DELIVERY;
+
+          const items = questions.map(q => {
+            const v = resp[q.key] || 'na';
+            const badge = v === 'yes' ? '<span class="badge badge-active">YES</span>'
+              : v === 'no' ? '<span class="badge badge-rejected">NO</span>'
+              : '<span class="badge badge-cancelled">N/A</span>';
+            return `<div style="display:flex; justify-content:space-between; padding:0.375rem 0; border-bottom:1px solid var(--border);">
+              <span>${q.label}</span>${badge}</div>`;
+          }).join('');
+
+          const overlay = document.createElement('div');
+          overlay.className = 'modal-overlay';
+          overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
+          overlay.innerHTML = `
+            <div class="modal" style="max-width:500px;">
+              <h2>${ev.eval_type === 'order_taking' ? 'Order Taking' : 'Meal Delivery'} Evaluation</h2>
+              <p style="color:var(--text-light); font-size:0.8125rem;">${ev.eval_date} | ${ev.evaluator_name} | ${ev.location === 'front_counter' ? 'Front Counter' : 'Drive Thru'} | Score: ${Math.round(ev.score_pct)}%</p>
+              <div style="max-height:50vh; overflow-y:auto; margin:1rem 0;">${items}</div>
+              ${ev.comments ? `<p style="margin-top:0.5rem; font-style:italic; color:var(--text-light);">${ev.comments}</p>` : ''}
+              <div class="modal-actions"><button class="btn" onclick="this.closest('.modal-overlay').remove()">Close</button></div>
+            </div>`;
+          document.body.appendChild(overlay);
+        });
+    }
+
+    // ── Leadership Academy (Candidate Dashboard) ─────────────────────
+    const LA_TIER_NAMES = { 1: "A Servant's Heart", 2: 'Emerging Servant Leader', 3: 'Business Leader', 4: 'Senior Leader' };
+    const LA_TIER_COLORS = { 1: '#3EB1C8', 2: '#F5A623', 3: '#8B5CF6', 4: '#E51636' };
+    const LA_RATING_LABELS = { 1: 'Beginning', 2: 'Developing', 3: 'Proficient', 4: 'Exemplary' };
+
+    async function loadMyLADashboard() {
+      const container = document.getElementById('laMyDashboard');
+      try {
+        const res = await fetch('/api/leadership-academy/my-dashboard');
+        if (!res.ok) { container.innerHTML = '<p style="text-align:center; color:var(--text-light); padding:2rem;">Not enrolled in Leadership Academy.</p>'; return; }
+        const data = await res.json();
+        renderMyLADashboard(data);
+      } catch (err) {
+        container.innerHTML = '<p style="text-align:center; color:var(--text-light); padding:2rem;">Failed to load dashboard.</p>';
+      }
+    }
+
+    function renderLAEvidenceUpload(cp) {
+      let filesHtml = '';
+      try {
+        const files = JSON.parse(cp.evidence_files || '[]');
+        filesHtml = files.map(function(f) {
+          return '<div style="display:flex; align-items:center; gap:0.375rem; padding:0.25rem 0; font-size:0.75rem;">'
+            + '<a href="/api/leadership-academy/evidence/' + esc(f.filename) + '" target="_blank" style="color:var(--brand-navy);">\u{1F4C4} ' + esc(f.originalName) + '</a>'
+            + '<span style="color:var(--text-light);">(' + (f.size / 1024).toFixed(0) + 'KB)</span>'
+            + '<button class="btn btn-sm" style="font-size:0.625rem; padding:0.125rem 0.375rem; color:var(--danger);" onclick="deleteLAEvidence(' + cp.checkpoint_id + ', \'' + esc(f.filename) + '\', this)">\u2715</button>'
+            + '</div>';
+        }).join('');
+      } catch(e) {}
+      return '<div style="margin-top:0.5rem; padding:0.5rem; background:#fff; border:1px dashed var(--border); border-radius:6px;">'
+        + '<div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.375rem;">'
+        + '<span style="font-size:0.75rem; color:var(--brand-navy); font-weight:600;">\u{1F4CE} Upload Certificates</span>'
+        + '<input type="file" id="la-upload-' + cp.checkpoint_id + '" accept=".pdf,.png,.jpg,.jpeg,.gif,.doc,.docx" style="font-size:0.6875rem; flex:1;" onchange="uploadLAEvidence(' + cp.checkpoint_id + ', this)">'
+        + '</div>'
+        + '<div id="la-files-' + cp.checkpoint_id + '">' + filesHtml + '</div>'
+        + '</div>';
+    }
+
+    var ytRegex = /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&]+)/;
+
+    // renderLALearningCenter removed — content now rendered inline in renderMyLADashboard
+
+    function renderMyLADashboard(data) {
+      const { candidate, checkpoints, resources, areaSummaries, totalCompleted, totalCheckpoints, resourcesCompleted, totalResources } = data;
+      const pct = totalCheckpoints ? Math.round(totalCompleted / totalCheckpoints * 100) : 0;
+      const container = document.getElementById('laMyDashboard');
+
+      container.innerHTML = `
+        <!-- Header -->
+        <div class="detail-panel" style="margin-bottom:1.5rem;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+            <div>
+              <h2 style="margin:0;">Leadership Academy</h2>
+              <div style="margin-top:0.5rem; display:flex; gap:0.5rem; align-items:center;">
+                <span class="badge" style="background:${LA_TIER_COLORS[candidate.current_tier]}15; color:${LA_TIER_COLORS[candidate.current_tier]}; font-weight:700; font-size:0.9375rem; padding:0.375rem 0.75rem;">
+                  ${LA_TIER_NAMES[candidate.current_tier]}
+                </span>
+                ${candidate.target_ldp_date ? `<span style="font-size:0.75rem; color:var(--text-light);">Target: ${candidate.target_ldp_date}</span>` : ''}
+              </div>
+            </div>
+            <div style="text-align:right;">
+              <div class="la-progress-text" style="font-size:2.5rem; font-weight:700; color:var(--brand-navy);">${pct}% Complete</div>
+              <div class="la-cp-count" style="font-size:0.75rem; color:var(--text-light);">${totalCompleted} of ${totalCheckpoints} checkpoints</div>
+              <button class="btn" onclick="loadMyGapAnalysis()" style="margin-top:0.5rem; font-size:0.8125rem; padding:0.375rem 0.75rem; background:var(--brand-navy); color:#fff; border:none; border-radius:6px; cursor:pointer;">📊 My Development Plan</button>
+            </div>
+          </div>
+          <div style="margin-top:1rem; background:var(--border); border-radius:6px; height:14px; overflow:hidden;">
+            <div class="la-progress-bar" style="width:${pct}%; height:100%; background:linear-gradient(90deg, var(--brand-red), var(--brand-navy)); border-radius:6px; transition:width 0.5s;"></div>
+          </div>
+          <div style="display:flex; gap:1rem; margin-top:0.75rem; font-size:0.8125rem; color:var(--text-light);">
+            <span>📚 ${resourcesCompleted}/${totalResources} resources completed</span>
+            <span>📅 Enrolled ${candidate.enrolled_at ? new Date(candidate.enrolled_at).toLocaleDateString() : 'N/A'}</span>
+          </div>
+        </div>
+
+        <!-- Gap Analysis / Development Plan (loaded on demand) -->
+        <div id="laGapAnalysis" style="display:none;"></div>
+
+        <!-- Competency Cards -->
+        <div class="stats-grid" style="margin-bottom:1.5rem;">
+          ${areaSummaries.map(a => `
+            <div class="stat-card la-area-card" id="la-card-${a.slug}" style="cursor:pointer; transition:transform 0.15s, border-color 0.15s;" onclick="toggleLAArea('${a.slug}')">
+              <div class="label">${esc(a.name)}</div>
+              <div style="display:flex; align-items:center; gap:0.75rem; margin-top:0.5rem;">
+                <div class="la-area-pct" style="font-size:1.5rem; font-weight:700; color:${a.pct >= 75 ? '#22c55e' : a.pct >= 40 ? '#eab308' : 'var(--brand-red)'};">${a.pct}%</div>
+                <div style="flex:1; background:var(--border); border-radius:4px; height:8px; overflow:hidden;">
+                  <div class="la-area-bar" style="width:${a.pct}%; height:100%; background:${a.pct >= 75 ? '#22c55e' : a.pct >= 40 ? '#eab308' : 'var(--brand-red)'}; border-radius:4px; transition:width 0.5s;"></div>
+                </div>
+              </div>
+              <div class="la-area-count" style="font-size:0.75rem; color:var(--text-light); margin-top:0.25rem;">${a.completed}/${a.total} completed</div>
+            </div>
+          `).join('')}
+        </div>
+
+        <!-- Checkpoint Details (collapsible per area) -->
+        ${areaSummaries.map(a => {
+          const areaCheckpoints = checkpoints.filter(cp => cp.area_slug === a.slug && cp.tier <= candidate.current_tier);
+          const tiers = {};
+          areaCheckpoints.forEach(cp => { if (!tiers[cp.tier]) tiers[cp.tier] = []; tiers[cp.tier].push(cp); });
+          return `
+          <div id="la-my-area-${a.slug}" style="display:none; margin-bottom:1.5rem;">
+            <div class="detail-panel" style="padding:1rem;">
+              <h3 style="margin:0 0 1rem; color:var(--brand-navy);">${esc(a.name)}</h3>
+              ${Object.entries(tiers).map(([tier, cps]) => `
+                <h4 style="color:${LA_TIER_COLORS[tier]}; font-size:0.8125rem; margin:0.75rem 0 0.5rem; text-transform:uppercase;">${LA_TIER_NAMES[tier]}</h4>
+                ${cps.map(cp => {
+                  const ratingStars = cp.rating ? '<span style="color:#eab308; font-size:0.75rem;">' + '★'.repeat(cp.rating) + '☆'.repeat(4 - cp.rating) + '</span>' : '<span style="color:#ccc; font-size:0.6875rem;">No rating</span>';
+                  const locked = !!cp.approved_at;
+                  const statusColors = { completed: '#22c55e', in_progress: '#eab308', not_started: '#d1d5db', na: '#9ca3af' };
+                  const statusColor = statusColors[cp.status] || '#d1d5db';
+                  return `
+                  <div style="padding:0.625rem; margin-bottom:0.375rem; background:var(--bg-alt, #f8f9fa); border:1px solid var(--border); border-radius:var(--radius-sm); ${locked ? 'border-left:3px solid #22c55e;' : ''}">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:0.5rem; flex-wrap:wrap;">
+                      <div style="flex:1; min-width:200px;">
+                        <strong style="color:var(--brand-navy); font-size:0.8125rem;">${esc(cp.code)} — ${esc(cp.title)}</strong>
+                        <div style="font-size:0.75rem; color:var(--text-light); margin-top:0.125rem;">${formatDesc(cp.description || '')}</div>
+                        ${cp.image_url ? '<div style="margin-top:0.5rem;"><img src="' + esc(cp.image_url) + '" alt="' + esc(cp.title) + '" style="max-width:100%; max-height:400px; border-radius:8px; border:1px solid var(--border); cursor:pointer;" onclick="this.style.maxHeight = this.style.maxHeight === \'none\' ? \'400px\' : \'none\';"></div>' : ''}
+                        ${cp.resource_url ? (() => { const m = cp.resource_url.match(ytRegex); if (m) return '<div style="margin-top:0.75rem; max-width:560px; width:100%;"><div style="position:relative; padding-bottom:56.25%; height:0; overflow:hidden; border-radius:8px;"><iframe src="https://www.youtube.com/embed/' + m[1] + '" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="position:absolute; top:0; left:0; width:100%; height:100%;"></iframe></div></div>'; return '<a href="' + esc(cp.resource_url) + '" target="_blank" style="font-size:0.75rem; display:inline-block; margin-top:0.375rem;">🔗 Open resource</a>'; })() : ''}
+                        ${cp.buy_url ? '<a href="' + esc(cp.buy_url) + '" target="_blank" style="font-size:0.75rem; display:inline-flex; align-items:center; gap:0.25rem; margin-top:0.5rem; padding:0.375rem 0.75rem; background:#FF9900; color:#fff; border-radius:4px; text-decoration:none; font-weight:600;">📖 Buy on Amazon <span style="font-weight:400; font-size:0.6875rem;">(optional)</span></a>' : ''}
+                        ${cp.evidence_required ? '<div style="font-size:0.6875rem; color:var(--brand-navy); margin-top:0.25rem;">📋 Evidence: ' + esc(cp.evidence_required) + '</div>' : ''}
+                      </div>
+                      <div style="display:flex; flex-direction:column; align-items:flex-end; gap:0.375rem; flex-shrink:0; min-width:140px;">
+                        ${!locked ? (() => {
+                          if (cp.area_slug === 'foundational') {
+                            return '<select onchange="updateMyLACheckpoint(' + cp.checkpoint_id + ', this.value)" style="width:auto; font-size:0.6875rem; padding:0.25rem 0.5rem; border-radius:4px; border:2px solid ' + statusColor + '; background:' + statusColor + '15; color:' + statusColor + '; font-weight:600; cursor:pointer;"><option value="not_started" ' + (cp.status === 'not_started' ? 'selected' : '') + '>⬜ No Iniciado</option><option value="in_progress" ' + (cp.status === 'in_progress' ? 'selected' : '') + '>🔶 En Progreso</option><option value="completed" ' + (cp.status === 'completed' ? 'selected' : '') + '>✅ Completado</option></select>';
+                          } else {
+                            const skillColors = { not_started: '#d1d5db', skill_1: '#E51636', skill_2: '#E51636', skill_3: '#eab308', skill_4: '#22c55e', skill_5: '#22c55e' };
+                            const sc = skillColors[cp.status] || '#d1d5db';
+                            return '<select onchange="updateMyLACheckpoint(' + cp.checkpoint_id + ', this.value)" style="width:auto; font-size:0.6875rem; padding:0.25rem 0.5rem; border-radius:4px; border:2px solid ' + sc + '; background:' + sc + '15; color:' + sc + '; font-weight:600; cursor:pointer;">' +
+                            '<option value="not_started" ' + (cp.status === 'not_started' ? 'selected' : '') + '>— Sin Evaluar</option>' +
+                            '<option value="skill_1" ' + (cp.status === 'skill_1' ? 'selected' : '') + '>1 - Sin Experiencia</option>' +
+                            '<option value="skill_2" ' + (cp.status === 'skill_2' ? 'selected' : '') + '>2 - Exposición Limitada</option>' +
+                            '<option value="skill_3" ' + (cp.status === 'skill_3' ? 'selected' : '') + '>3 - En Desarrollo</option>' +
+                            '<option value="skill_4" ' + (cp.status === 'skill_4' ? 'selected' : '') + '>4 - Competente</option>' +
+                            '<option value="skill_5" ' + (cp.status === 'skill_5' ? 'selected' : '') + '>5 - Experto / Puede Enseñar</option></select>';
+                          }
+                        })()
+                        : '<span class="badge badge-active" style="font-size:0.6875rem;">✅ Completado</span>'}
+                        <div style="font-size:0.6875rem; color:var(--text-light); text-align:right;">
+                          <span style="font-weight:600;">Leader:</span> ${ratingStars}
+                        </div>
+                        ${cp.approved_at ? '<div style="font-size:0.625rem; color:#22c55e;">Approved ' + new Date(cp.approved_at).toLocaleDateString() + '</div>' : ''}
+                        ${cp.leader_notes ? '<div style="font-size:0.625rem; color:var(--text-light); text-align:right; max-width:160px;">💬 ' + esc(cp.leader_notes) + '</div>' : ''}
+                      </div>
+                    </div>
+                    ${!locked && cp.evidence_required ? '<div style="margin-top:0.5rem; display:flex; gap:0.5rem; align-items:flex-start; flex-wrap:wrap;"><textarea id="la-my-ev-' + cp.checkpoint_id + '" placeholder="Evidence notes..." rows="2" oninput="this.style.height=\'auto\';this.style.height=this.scrollHeight+\'px\';" style="flex:1; font-size:0.75rem; padding:0.25rem 0.5rem; min-width:120px; resize:vertical; border:1px solid var(--border); border-radius:var(--radius-sm); font-family:inherit; line-height:1.4;">' + esc(cp.evidence_notes || '') + '</textarea><button class="btn btn-sm" onclick="updateMyLACheckpoint(' + cp.checkpoint_id + ', null, document.getElementById(\'la-my-ev-' + cp.checkpoint_id + '\').value, this)" style="font-size:0.6875rem;">Save</button></div>' : ''}
+                    ${!locked && cp.code === '1.2' && cp.area_slug === 'people' ? renderLAEvidenceUpload(cp) : ''}
+                  </div>`;
+                }).join('')}
+              `).join('')}
+            </div>
+          </div>`;
+        }).join('')}
+
+        <!-- Learning Center moved above Competency Cards -->
+      `;
+    }
+
+    async function loadMyGapAnalysis() {
+      const container = document.getElementById('laGapAnalysis');
+      if (!container) return;
+      // Toggle visibility if already loaded
+      if (container.dataset.loaded === 'true') {
+        container.style.display = container.style.display === 'none' ? '' : 'none';
+        if (container.style.display !== 'none') container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+      container.style.display = '';
+      container.innerHTML = '<p style="text-align:center; padding:1rem; color:var(--text-light);">Generating development plan...</p>';
+      try {
+        const res = await fetch('/api/leadership-academy/my-gap-analysis');
+        if (!res.ok) throw new Error('Failed');
+        const data = await res.json();
+        container.dataset.loaded = 'true';
+        renderGapAnalysis(container, data);
+        container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } catch (err) {
+        container.innerHTML = '<p style="text-align:center; padding:1rem; color:var(--danger);">Failed to load development plan.</p>';
+      }
+    }
+
+    function renderGapAnalysis(container, data) {
+      const areasHtml = data.areas.map(a => {
+        const color = a.pct >= 75 ? '#22c55e' : a.pct >= 50 ? '#eab308' : '#E51636';
+        const strengthItems = (a.strengths || []).map(s =>
+          `<div style="display:flex; align-items:center; gap:0.5rem; padding:0.375rem 0.5rem; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:6px;">
+            <span style="color:#22c55e;">✅</span>
+            <span style="font-size:0.8125rem; color:#166534;">${esc(s.code)} — ${esc(s.title)}</span>
+          </div>`).join('');
+        const gapItems = (a.gaps || []).map(g =>
+          `<div style="display:flex; align-items:center; gap:0.5rem; padding:0.375rem 0.5rem; background:#fef2f2; border:1px solid #fecaca; border-radius:6px;">
+            <span style="color:#E51636;">🎯</span>
+            <span style="font-size:0.8125rem; color:#991b1b;">${esc(g.code)} — ${esc(g.title)}</span>
+          </div>`).join('');
+        const hasContent = strengthItems || gapItems;
+        return `
+          <div style="margin-bottom:1.25rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem; padding-bottom:0.375rem; border-bottom:2px solid ${color};">
+              <h4 style="margin:0; font-size:0.9375rem; color:var(--brand-navy);">${esc(a.name)}</h4>
+              <span style="font-size:0.8125rem; font-weight:700; color:${color};">${a.pct}%</span>
+            </div>
+            ${strengthItems ? '<div style="margin-bottom:0.5rem;"><div style="font-size:0.75rem; font-weight:600; color:#15803d; margin-bottom:0.25rem;">Strengths</div><div style="display:flex; flex-direction:column; gap:0.25rem;">' + strengthItems + '</div></div>' : ''}
+            ${gapItems ? '<div><div style="font-size:0.75rem; font-weight:600; color:#991b1b; margin-bottom:0.25rem;">Gaps</div><div style="display:flex; flex-direction:column; gap:0.25rem;">' + gapItems + '</div></div>' : ''}
+            ${!hasContent ? '<p style="font-size:0.8125rem; color:var(--text-light); margin:0;">All in progress</p>' : ''}
+          </div>`;
+      }).join('');
+
+      container.innerHTML = `
+        <div class="detail-panel" style="margin-bottom:1.5rem; border:2px solid var(--brand-navy);">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; margin-bottom:1rem;">
+            <h3 style="margin:0; color:var(--brand-navy);">📊 Gaps & Strengths by Skill</h3>
+            <button class="btn btn-sm" onclick="document.getElementById('laGapAnalysis').style.display='none'" style="font-size:0.75rem;">✕ Close</button>
+          </div>
+          ${areasHtml}
+        </div>`;
+    }
+
+    function toggleLAArea(slug) {
+      // Reset all cards
+      document.querySelectorAll('.la-area-card').forEach(function(card) {
+        card.style.borderColor = '';
+        card.style.boxShadow = '';
+      });
+      // Close all other areas
+      document.querySelectorAll('[id^="la-my-area-"]').forEach(function(div) {
+        if (div.id !== 'la-my-area-' + slug) div.style.display = 'none';
+      });
+      // Toggle the clicked area
+      var el = document.getElementById('la-my-area-' + slug);
+      if (!el) return;
+      var wasHidden = el.style.display === 'none';
+      el.style.display = wasHidden ? '' : 'none';
+      // Highlight active card
+      var card = document.getElementById('la-card-' + slug);
+      if (card && wasHidden) {
+        card.style.borderColor = 'var(--brand-red)';
+        card.style.boxShadow = '0 0 0 2px var(--brand-red)';
+      }
+      // Scroll into view if opened
+      if (wasHidden) {
+        setTimeout(function() { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 100);
+      }
+    }
+
+    async function updateMyLACheckpoint(checkpointId, status, evidence_notes, btn) {
+      const body = {};
+      // Find the calling select element by checkpoint ID for styling updates
+      const callingSelect = status ? document.querySelector('select[onchange*="' + checkpointId + '"]') : null;
+      if (status) {
+        body.status = status;
+        // Update dropdown styling immediately
+        const statusColors = { completed: '#22c55e', in_progress: '#eab308', not_started: '#d1d5db', skill_1: '#E51636', skill_2: '#E51636', skill_3: '#eab308', skill_4: '#22c55e', skill_5: '#22c55e' };
+        const color = statusColors[status] || '#d1d5db';
+        if (callingSelect) {
+          callingSelect.style.borderColor = color;
+          callingSelect.style.background = color + '15';
+          callingSelect.style.color = color;
+        }
+      }
+      if (evidence_notes !== undefined) body.evidence_notes = evidence_notes;
+      await fetch(`/api/leadership-academy/my-checkpoints/${checkpointId}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      if (btn) { btn.textContent = '✓'; setTimeout(() => btn.textContent = 'Save', 1000); }
+      if (status) {
+        // Fetch fresh data and update only the numbers
+        try {
+          var res = await fetch('/api/leadership-academy/my-dashboard');
+          var data = await res.json();
+          var totalCompleted = data.totalCompleted;
+          var totalCheckpoints = data.totalCheckpoints;
+          var pct = totalCheckpoints ? Math.round(totalCompleted / totalCheckpoints * 100) : 0;
+
+          // Update main progress
+          var bar = document.querySelector('.la-progress-bar');
+          if (bar) bar.style.width = pct + '%';
+          var txt = document.querySelector('.la-progress-text');
+          if (txt) txt.textContent = pct + '% Complete';
+          var cp = document.querySelector('.la-cp-count');
+          if (cp) cp.textContent = totalCompleted + ' of ' + totalCheckpoints + ' checkpoints';
+
+          // Update each area card
+          data.areaSummaries.forEach(function(a) {
+            var card = document.getElementById('la-card-' + a.slug);
+            if (!card) return;
+            var p = card.querySelector('.la-area-pct');
+            var b = card.querySelector('.la-area-bar');
+            var c = card.querySelector('.la-area-count');
+            var color = a.pct >= 75 ? '#22c55e' : a.pct >= 40 ? '#eab308' : 'var(--brand-red)';
+            if (p) { p.textContent = a.pct + '%'; p.style.color = color; }
+            if (b) { b.style.width = a.pct + '%'; b.style.background = color; }
+            if (c) c.textContent = a.completed + '/' + a.total + ' completed';
+          });
+        } catch(e) { console.error('Failed to update progress:', e); }
+      }
+    }
+
+    async function uploadLAEvidence(checkpointId, input) {
+      if (!input.files.length) return;
+      const formData = new FormData();
+      formData.append('file', input.files[0]);
+      try {
+        const res = await fetch(`/api/leadership-academy/my-checkpoints/${checkpointId}/upload`, {
+          method: 'POST', body: formData
+        });
+        const data = await res.json();
+        if (data.success) {
+          // Refresh the file list
+          const container = document.getElementById(`la-files-${checkpointId}`);
+          container.innerHTML = data.files.map(f => `
+            <div style="display:flex; align-items:center; gap:0.375rem; padding:0.25rem 0; font-size:0.75rem;">
+              <a href="/api/leadership-academy/evidence/${esc(f.filename)}" target="_blank" style="color:var(--brand-navy);">📄 ${esc(f.originalName)}</a>
+              <span style="color:var(--text-light);">(${(f.size / 1024).toFixed(0)}KB)</span>
+              <button class="btn btn-sm" style="font-size:0.625rem; padding:0.125rem 0.375rem; color:var(--danger);" onclick="deleteLAEvidence(${checkpointId}, '${esc(f.filename)}', this)">✕</button>
+            </div>`).join('');
+          input.value = '';
+        } else {
+          alert(data.error || 'Upload failed');
+        }
+      } catch (err) { alert('Upload failed: ' + err.message); }
+    }
+
+    async function deleteLAEvidence(checkpointId, filename, btn) {
+      if (!confirm('Delete this file?')) return;
+      try {
+        const res = await fetch(`/api/leadership-academy/my-checkpoints/${checkpointId}/upload/${filename}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) {
+          btn.closest('div').remove();
+        }
+      } catch (err) { alert('Delete failed'); }
+    }
+
+    async function toggleMyLAResource(resourceId, btn) {
+      await fetch(`/api/leadership-academy/my-resources/${resourceId}`, { method: 'PUT' });
+      // Toggle button state
+      if (btn.classList.contains('btn-primary')) {
+        btn.classList.remove('btn-primary');
+        btn.textContent = 'Mark Done';
+      } else {
+        btn.classList.add('btn-primary');
+        btn.textContent = '✓ Done';
+      }
+    }
+
+    // ── Executive Scorecard (Read-Only for Directors) ──────────────────
+    // Uses shared ScorecardView from /js/scorecard.js
+
+    var empScorecard = new ScorecardView({
+      monthPicker: 'empScMonthPicker',
+      section1: 'empScSection1',
+      section2: 'empScSection2',
+      section3: 'empScSection3',
+      section4: 'empScSection4',
+      osatSlot: 'empScOsatGeneralSlot',
+      salesSlot: 'empScSalesTotalSlot',
+      osatChart: 'empScOsatTrendChart',
+      salesChart: 'empScSalesTrendChart',
+      sosChart: 'empScSosTrendChart',
+      periodBtnScope: '#tab-scorecard'
+    });
+
+    function empSetSCPeriod(period, btn) {
+      empScorecard.setPeriod(period, btn);
+    }
+
+    async function empLoadScorecard() {
+      await empScorecard.load();
+    }
+
+    // ── Director Data Entry ──────────────────────────────────────────
+    function empShowSCDataEntry() {
+      empScorecard.loadConfig().then(function(cfg) {
+        var picker = document.getElementById('empScMonthPicker');
+        document.getElementById('empScEntryMonth').value = picker.value || new Date().toISOString().slice(0, 7);
+
+        var sectionNames = {
+          operational_excellence: 'Hospitality & Second Mile Service',
+          sales_growth: 'Ventas y Crecimiento',
+          quality_brand: 'Excelencia Operacional',
+          community: 'Comunidad'
+        };
+
+        var html = '';
+        var sectionKeys = Object.keys(cfg.sections);
+        for (var s = 0; s < sectionKeys.length; s++) {
+          var secKey = sectionKeys[s];
+          var metrics = cfg.sections[secKey];
+          html += '<h3 style="color:var(--brand-navy); margin:1.5rem 0 0.75rem; border-bottom:2px solid var(--border); padding-bottom:0.5rem;">' + sectionNames[secKey] + '</h3>';
+          html += '<div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">';
+          for (var m = 0; m < metrics.length; m++) {
+            var key = metrics[m];
+            var label = cfg.labels[key] || key;
+            var hint = '';
+            if (cfg.pctMetrics.includes(key)) hint = ' (decimal, ej: 0.92)';
+            if (cfg.currencyMetrics.includes(key)) hint = ' ($)';
+            if (key === 'speed_of_service') hint = ' (M:SS, ej: 4:41)';
+            var inputType = key === 'speed_of_service' ? 'text' : 'number';
+            html += '<div class="form-group" style="margin:0;">';
+            html += '<label style="font-size:0.8rem;">' + esc(label) + '<span style="color:var(--text-light); font-size:0.7rem;">' + hint + '</span></label>';
+            html += '<input type="' + inputType + '" step="any" id="empsc_' + key + '" style="font-size:0.875rem;" placeholder="' + (key === 'speed_of_service' ? '4:41' : '—') + '">';
+            html += '</div>';
+          }
+          html += '</div>';
+        }
+        // OSAT by Weekday
+        html += '<h3 style="color:var(--brand-navy); margin:1.5rem 0 0.75rem; border-bottom:2px solid var(--border); padding-bottom:0.5rem;">OSAT por D\u00EDa de la Semana</h3>';
+        html += '<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.75rem;">';
+        var weekdays = ['Lunes', 'Martes', 'Mi\u00E9rcoles', 'Jueves', 'Viernes', 'S\u00E1bado'];
+        for (var w = 0; w < weekdays.length; w++) {
+          html += '<div class="form-group" style="margin:0;">';
+          html += '<label style="font-size:0.8rem;">' + weekdays[w] + ' <span style="color:var(--text-light); font-size:0.7rem;">(decimal, ej: 0.85)</span></label>';
+          html += '<input type="number" step="any" id="empsc_weekday_' + w + '" style="font-size:0.875rem;" placeholder="—">';
+          html += '</div>';
+        }
+        html += '</div>';
+
+        document.getElementById('empScEntryFields').innerHTML = html;
+        empPrefillEntryData();
+        document.getElementById('empScEntryModal').style.display = '';
+      });
+    }
+
+    function empPrefillEntryData() {
+      var entryMonth = document.getElementById('empScEntryMonth').value;
+      if (!entryMonth) return;
+      fetch('/api/scorecard/month/' + entryMonth).then(function(r) { return r.json(); }).then(function(rows) {
+        for (var i = 0; i < rows.length; i++) {
+          var inp = document.getElementById('empsc_' + rows[i].metric_key);
+          if (inp && rows[i].metric_value !== null) {
+            if (rows[i].metric_key === 'speed_of_service') {
+              var sosM = Math.floor(rows[i].metric_value / 60);
+              var sosS = Math.round(rows[i].metric_value % 60);
+              inp.value = sosM + ':' + String(sosS).padStart(2, '0');
+            } else {
+              inp.value = rows[i].metric_value;
+            }
+          }
+        }
+      });
+      var weekdays = ['Lunes', 'Martes', 'Mi\u00E9rcoles', 'Jueves', 'Viernes', 'S\u00E1bado'];
+      fetch('/api/scorecard/osat-weekday/' + entryMonth).then(function(r) { return r.json(); }).then(function(rows) {
+        for (var i = 0; i < rows.length; i++) {
+          var idx = weekdays.indexOf(rows[i].weekday);
+          if (idx >= 0) {
+            var inp = document.getElementById('empsc_weekday_' + idx);
+            if (inp && rows[i].osat_value !== null) inp.value = rows[i].osat_value;
+          }
+        }
+      });
+    }
+
+    function empReloadSCEntryData() {
+      var cfg = empScorecard.config;
+      if (!cfg) return;
+      var allKeys = Object.values(cfg.sections).flat();
+      for (var i = 0; i < allKeys.length; i++) {
+        var inp = document.getElementById('empsc_' + allKeys[i]);
+        if (inp) inp.value = '';
+      }
+      for (var w = 0; w < 6; w++) {
+        var wInp = document.getElementById('empsc_weekday_' + w);
+        if (wInp) wInp.value = '';
+      }
+      empPrefillEntryData();
+    }
+
+    function empCloseSCModal() {
+      document.getElementById('empScEntryModal').style.display = 'none';
+    }
+
+    async function empSaveSCData(e) {
+      e.preventDefault();
+      var month = document.getElementById('empScEntryMonth').value;
+      if (!month) { alert('Selecciona un mes'); return; }
+
+      var cfg = empScorecard.config;
+      var metrics = {};
+      var allKeys = Object.values(cfg.sections).flat();
+      for (var i = 0; i < allKeys.length; i++) {
+        var inp = document.getElementById('empsc_' + allKeys[i]);
+        if (inp && inp.value !== '') {
+          if (allKeys[i] === 'speed_of_service') {
+            var sosVal = inp.value.trim();
+            if (sosVal.indexOf(':') !== -1) {
+              var sosParts = sosVal.split(':');
+              metrics[allKeys[i]] = parseInt(sosParts[0]) * 60 + parseInt(sosParts[1] || 0);
+            } else {
+              metrics[allKeys[i]] = parseFloat(sosVal);
+            }
+          } else {
+            metrics[allKeys[i]] = parseFloat(inp.value);
+          }
+        }
+      }
+
+      var weekdayNames = ['Lunes', 'Martes', 'Mi\u00E9rcoles', 'Jueves', 'Viernes', 'S\u00E1bado'];
+      var weekdays = {};
+      for (var w = 0; w < weekdayNames.length; w++) {
+        var wInp = document.getElementById('empsc_weekday_' + w);
+        if (wInp && wInp.value !== '') {
+          weekdays[weekdayNames[w]] = parseFloat(wInp.value);
+        }
+      }
+
+      try {
+        var res = await fetch('/api/scorecard/month/' + month, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ metrics: metrics })
+        });
+        var data = await res.json();
+
+        if (Object.keys(weekdays).length > 0) {
+          await fetch('/api/scorecard/osat-weekday/' + month, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ weekdays: weekdays })
+          });
+        }
+
+        if (data.success) {
+          empCloseSCModal();
+          empLoadScorecard();
+        } else {
+          alert(data.error || 'Error guardando datos');
+        }
+      } catch (err) {
+        alert('Error de conexi\u00F3n');
+      }
+    }
   </script>
+
+  <!-- Change Password Modal -->
+  <div id="empChangePwModal" class="modal-overlay hidden">
+    <div class="modal" style="max-width:380px;">
+      <h2>Change Password</h2>
+      <form id="empChangePwForm" onsubmit="submitChangePw(event)">
+        <div class="form-group">
+          <label for="empCpCurrent">Current Password</label>
+          <input type="password" id="empCpCurrent" required>
+        </div>
+        <div class="form-group">
+          <label for="empCpNew">New Password</label>
+          <input type="password" id="empCpNew" required minlength="6" placeholder="At least 6 characters">
+        </div>
+        <div class="form-group">
+          <label for="empCpConfirm">Confirm New Password</label>
+          <input type="password" id="empCpConfirm" required minlength="6">
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn" onclick="closeChangePw()">Cancel</button>
+          <button type="submit" class="btn btn-primary">Update Password</button>
+        </div>
+      </form>
+    </div>
+  </div>
 </body>
 </html>

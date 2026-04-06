@@ -95,3 +95,65 @@ document.getElementById('setPasswordForm').addEventListener('submit', async (e) 
     btn.textContent = 'Set Password';
   }
 });
+
+// ── Forgot Password Flow ──────────────────────────────────────────
+document.getElementById('forgotPasswordLink').addEventListener('click', function(e) {
+  e.preventDefault();
+  document.getElementById('loginForm').style.display = 'none';
+  document.getElementById('resetForm').style.display = '';
+  document.getElementById('resetPin').focus();
+});
+
+document.getElementById('backToLoginLink').addEventListener('click', function(e) {
+  e.preventDefault();
+  document.getElementById('resetForm').style.display = 'none';
+  document.getElementById('resetError').style.display = 'none';
+  document.getElementById('resetSuccess').style.display = 'none';
+  document.getElementById('loginForm').style.display = '';
+});
+
+document.getElementById('resetForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  var errorEl = document.getElementById('resetError');
+  var successEl = document.getElementById('resetSuccess');
+  errorEl.style.display = 'none';
+  successEl.style.display = 'none';
+
+  var pin = document.getElementById('resetPin').value.trim();
+  if (!pin) {
+    errorEl.textContent = 'Please enter your PIN.';
+    errorEl.style.display = 'block';
+    return;
+  }
+
+  var btn = e.target.querySelector('button[type="submit"]');
+  btn.disabled = true;
+  btn.textContent = 'Resetting\u2026';
+
+  try {
+    var res = await fetch('/api/auth/reset-to-pin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: pin })
+    });
+
+    var data = await res.json();
+
+    if (data.success) {
+      successEl.textContent = 'Password reset! You can now log in using your PIN as both username and password.';
+      successEl.style.display = 'block';
+      btn.textContent = 'Reset Password';
+      btn.disabled = false;
+    } else {
+      errorEl.textContent = data.error || 'Failed to reset password.';
+      errorEl.style.display = 'block';
+      btn.textContent = 'Reset Password';
+      btn.disabled = false;
+    }
+  } catch (err) {
+    errorEl.textContent = 'Connection error. Please try again.';
+    errorEl.style.display = 'block';
+    btn.textContent = 'Reset Password';
+    btn.disabled = false;
+  }
+});

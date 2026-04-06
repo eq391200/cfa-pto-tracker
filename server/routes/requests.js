@@ -106,10 +106,11 @@ router.post('/', (req, res) => {
     }
 
     // Balance check: earned − taken − pending ≥ requested
-    const earnedCol = type === 'sick' ? 'sick_days_earned' : 'vacation_days_earned';
-    const earned = db.prepare(`
-      SELECT COALESCE(SUM(${earnedCol}), 0) AS total FROM accruals WHERE employee_id = ?
-    `).get(employee_id);
+    const earnedSql = {
+      sick: 'SELECT COALESCE(SUM(sick_days_earned), 0) AS total FROM accruals WHERE employee_id = ?',
+      vacation: 'SELECT COALESCE(SUM(vacation_days_earned), 0) AS total FROM accruals WHERE employee_id = ?'
+    };
+    const earned = db.prepare(earnedSql[type]).get(employee_id);
 
     const taken = db.prepare(
       'SELECT COALESCE(SUM(days_taken), 0) AS total FROM time_off_taken WHERE employee_id = ? AND type = ?'

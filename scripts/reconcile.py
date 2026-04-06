@@ -20,8 +20,8 @@ import calendar
 
 # Parse command-line arguments
 parser = argparse.ArgumentParser(description='La Rambla Monthly Reconciliation')
-parser.add_argument('--month', type=int, required=True, help='Month number (1-12)')
-parser.add_argument('--year', type=int, required=True, help='Year (e.g. 2026)')
+parser.add_argument('--month', type=int, required=False, help='Month number (1-12) — auto-detected if omitted')
+parser.add_argument('--year', type=int, required=False, help='Year (e.g. 2026) — auto-detected if omitted')
 parser.add_argument('--uploads-dir', type=str, required=True, help='Directory containing input files')
 parser.add_argument('--output-dir', type=str, required=True, help='Directory for generated HTML report')
 parser.add_argument('--work-dir', type=str, required=True, help='Working directory for temp files')
@@ -32,8 +32,81 @@ WORK_DIR = args.work_dir
 OUTPUT_DIR = args.output_dir
 RECON_STATE_DIR = os.path.join(OUTPUT_DIR, "recon_states")
 
-PERIOD_MONTH = args.month
-PERIOD_YEAR = args.year
+
+def detect_period(uploads_dir):
+    """Auto-detect the reconciliation period from GASTOS PAYMENT_DATE (authoritative source).
+    Reads all gastos_*.csv files.
+    """
+    from collections import Counter
+    all_dates = []
+
+    # Try multiple date formats the GASTOS export might use
+    DATE_FORMATS = ['%d-%b-%y', '%m/%d/%Y', '%m/%d/%y', '%Y-%m-%d', '%d-%b-%Y', '%m-%d-%Y']
+
+    i = 0
+    while True:
+        path = os.path.join(uploads_dir, f"gastos_{i}.csv")
+        if not os.path.exists(path):
+            break
+        try:
+            # Try multiple encodings for files with special characters (Spanish, etc.)
+            for enc in ['utf-8', 'latin-1', 'cp1252', 'iso-8859-1']:
+                try:
+                    df = pd.read_csv(path, encoding=enc)
+                    print(f"  [Auto-detect] gastos_{i}.csv: read with encoding '{enc}'", file=sys.stderr)
+                    break
+                except UnicodeDecodeError:
+                    continue
+            else:
+                print(f"  [Auto-detect] gastos_{i}.csv: could not decode with any encoding", file=sys.stderr)
+                i += 1
+                continue
+            col = df.get('PAYMENT_DATE')
+            if col is None:
+                # Try case-insensitive column match
+                for c in df.columns:
+                    if c.strip().upper() == 'PAYMENT_DATE':
+                        col = df[c]
+                        break
+            if col is None:
+                print(f"  [Auto-detect] gastos_{i}.csv: no PAYMENT_DATE column. Columns: {list(df.columns)}", file=sys.stderr)
+                i += 1
+                continue
+            # Try each format until one works
+            dates = pd.Series(dtype='datetime64[ns]')
+            for fmt in DATE_FORMATS:
+                dates = pd.to_datetime(col, format=fmt, errors='coerce').dropna()
+                if len(dates) > 0:
+                    print(f"  [Auto-detect] gastos_{i}.csv: parsed {len(dates)} dates with format '{fmt}'", file=sys.stderr)
+                    break
+            if len(dates) == 0:
+                # Last resort: let pandas infer the format
+                dates = pd.to_datetime(col, errors='coerce', dayfirst=False).dropna()
+                if len(dates) > 0:
+                    print(f"  [Auto-detect] gastos_{i}.csv: parsed {len(dates)} dates with inferred format", file=sys.stderr)
+            all_dates.extend(dates.tolist())
+        except Exception as e:
+            print(f"  [Auto-detect] gastos_{i}.csv: error reading file: {e}", file=sys.stderr)
+        i += 1
+
+    if not all_dates:
+        raise ValueError("Could not detect period: no valid dates in any GASTOS file")
+
+    month_year_counts = Counter((d.month, d.year) for d in all_dates)
+    (best_month, best_year), count = month_year_counts.most_common(1)[0]
+    print(f"  [Auto-detect] Period from GASTOS: {best_month}/{best_year} ({count} of {len(all_dates)} expenses)", file=sys.stderr)
+    for (m, y), c in month_year_counts.most_common():
+        print(f"    {calendar.month_abbr[m]} {y}: {c} expenses", file=sys.stderr)
+    return best_month, best_year
+
+
+# Determine period — use explicit args or auto-detect from files
+if args.month and args.year:
+    PERIOD_MONTH = args.month
+    PERIOD_YEAR = args.year
+    print(f"Using explicit period: {PERIOD_MONTH}/{PERIOD_YEAR}", file=sys.stderr)
+else:
+    PERIOD_MONTH, PERIOD_YEAR = detect_period(UPLOADS_DIR)
 
 MONTH_NAME = calendar.month_name[PERIOD_MONTH]
 MONTH_ABBR = calendar.month_abbr[PERIOD_MONTH].lower()
@@ -124,6 +197,7 @@ VENDOR_ALIASES = {
     'uber': ['uber eats', 'uber'],
     'texaco': ['texaco', 'texaco la rambla'],
     'pepe gangas': ['pepe gangas'],
+    'office depot': ['office depot', 'officemax', 'office depot officemax', 'officemax/depot'],
 }
 
 # ============================================================================
@@ -131,97 +205,183 @@ VENDOR_ALIASES = {
 # ============================================================================
 
 def load_expenses():
-    """Load expense receipts CSV"""
-    path = os.path.join(UPLOADS_DIR, "gastos.csv")
-    df = pd.read_csv(path, encoding='utf-8')
-    
-    # Parse dates - format is "D-MMM-YY" like "3-Feb-26"
-    df['PAYMENT_DATE'] = pd.to_datetime(df['PAYMENT_DATE'], format='%d-%b-%y', errors='coerce')
-    df['INVOICE_DATE'] = pd.to_datetime(df['INVOICE_DATE'], format='%d-%b-%y', errors='coerce')
-    
-    # Filter to February 2026
-    feb_mask = (df['PAYMENT_DATE'].dt.month == PERIOD_MONTH) & (df['PAYMENT_DATE'].dt.year == PERIOD_YEAR)
-    df = df[feb_mask].reset_index(drop=True)
-    
+    """Load expense receipts from all gastos CSV files (gastos_0.csv, gastos_1.csv, ...).
+    Each expense's PAYMENT_DATE determines which month it belongs to.
+    """
+    frames = []
+    i = 0
+    while True:
+        path = os.path.join(UPLOADS_DIR, f"gastos_{i}.csv")
+        if not os.path.exists(path):
+            break
+        # Try multiple encodings for files with special characters (Spanish, etc.)
+        df = None
+        for enc in ['utf-8', 'latin-1', 'cp1252', 'iso-8859-1']:
+            try:
+                df = pd.read_csv(path, encoding=enc)
+                break
+            except UnicodeDecodeError:
+                continue
+        if df is None:
+            print(f"  [GASTOS] File gastos_{i}.csv: could not decode with any encoding, skipping", file=sys.stderr)
+            i += 1
+            continue
+        print(f"  [GASTOS] File gastos_{i}.csv: {len(df)} rows", file=sys.stderr)
+        frames.append(df)
+        i += 1
+
+    if not frames:
+        raise ValueError("No gastos files found (expected gastos_0.csv, gastos_1.csv, ...)")
+
+    df = pd.concat(frames, ignore_index=True)
+
+    # Parse dates — try multiple formats for flexibility
+    DATE_FORMATS = ['%d-%b-%y', '%m/%d/%Y', '%m/%d/%y', '%Y-%m-%d', '%d-%b-%Y', '%m-%d-%Y']
+
+    for date_col in ['PAYMENT_DATE', 'INVOICE_DATE']:
+        if date_col not in df.columns:
+            # Try case-insensitive match
+            for c in df.columns:
+                if c.strip().upper() == date_col:
+                    df.rename(columns={c: date_col}, inplace=True)
+                    break
+        if date_col in df.columns:
+            parsed = pd.Series(dtype='datetime64[ns]', index=df.index)
+            for fmt in DATE_FORMATS:
+                attempt = pd.to_datetime(df[date_col], format=fmt, errors='coerce')
+                good = attempt.notna().sum()
+                if good > 0:
+                    parsed = attempt
+                    print(f"  [GASTOS] {date_col}: parsed {good}/{len(df)} with format '{fmt}'", file=sys.stderr)
+                    break
+            if parsed.isna().all():
+                # Last resort: let pandas infer
+                parsed = pd.to_datetime(df[date_col], errors='coerce', dayfirst=False)
+                good = parsed.notna().sum()
+                if good > 0:
+                    print(f"  [GASTOS] {date_col}: parsed {good}/{len(df)} with inferred format", file=sys.stderr)
+            df[date_col] = parsed
+
     # Clean amounts
     df['AMOUNT'] = pd.to_numeric(df['AMOUNT'], errors='coerce')
-    
+
+    # Drop duplicates (in case the same expense appears in multiple files)
+    before = len(df)
+    df = df.drop_duplicates(subset=['PAYMENT_DATE', 'VENDOR', 'AMOUNT', 'INVOICE_NUMBER'], keep='first').reset_index(drop=True)
+    dupes = before - len(df)
+    if dupes > 0:
+        print(f"  [GASTOS] Removed {dupes} duplicate rows across files", file=sys.stderr)
+
+    # Show month breakdown
+    from collections import Counter
+    month_counts = Counter((d.month, d.year) for d in df['PAYMENT_DATE'].dropna())
+    for (m, y), c in sorted(month_counts.items()):
+        print(f"  [GASTOS] {calendar.month_abbr[m]} {y}: {c} expenses", file=sys.stderr)
+
+    print(f"  [GASTOS] Total: {len(df)} expenses loaded", file=sys.stderr)
     return df
 
 def load_chase():
-    """Load Chase 4348 activity"""
+    """Load Chase 4348 activity — all transactions, no month filtering.
+    Expected CSV columns: Card, Transaction Date, Post Date, Description, Category, Type, Amount, Memo
+    """
     path = os.path.join(UPLOADS_DIR, "chase.csv")
     df = pd.read_csv(path)
-    
-    # Parse dates - use Transaction Date
+    print(f"  [Chase] Raw rows: {len(df)}, columns: {list(df.columns)}", file=sys.stderr)
+
+    # Parse dates
     df['Transaction Date'] = pd.to_datetime(df['Transaction Date'], format='%m/%d/%Y', errors='coerce')
+    if df['Transaction Date'].isna().all():
+        df['Transaction Date'] = pd.to_datetime(pd.read_csv(path)['Transaction Date'], errors='coerce')
     df['Amount'] = pd.to_numeric(df['Amount'], errors='coerce')
-    
-    # Filter to February 2026 (transaction date)
-    feb_mask = (df['Transaction Date'].dt.month == PERIOD_MONTH) & (df['Transaction Date'].dt.year == PERIOD_YEAR)
-    df = df[feb_mask].reset_index(drop=True)
-    
+
+    # Drop rows with no valid date
+    df = df.dropna(subset=['Transaction Date']).reset_index(drop=True)
+
     # Add source and normalize amount (Chase shows negative for purchases)
     df['source'] = 'Chase Ink 4348'
     df['normalized_amount'] = df['Amount'].abs()
-    
+
+    print(f"  [Chase] Loaded {len(df)} transactions", file=sys.stderr)
     return df
 
+def _find_amex_header_row(df_raw):
+    """Auto-detect the header row in an AMEX XLSX by scanning for 'Date' in the first column."""
+    for i in range(min(20, len(df_raw))):
+        val = str(df_raw.iloc[i, 0]).strip().lower()
+        if val == 'date':
+            print(f"  [AMEX] Found header row at index {i}", file=sys.stderr)
+            return i
+    # Fallback to row 6
+    print("  [AMEX] WARNING: Could not find 'Date' header, falling back to row 6", file=sys.stderr)
+    return 6
+
 def load_amex_platinum():
-    """Load AMEX Platinum activity"""
+    """Load AMEX Platinum activity — all transactions, no month filtering."""
     path = os.path.join(UPLOADS_DIR, "amex_platinum.xlsx")
     df = pd.read_excel(path, header=None)
-    
-    # Use row 6 as header
-    df.columns = df.iloc[6].values
-    df = df.iloc[7:].reset_index(drop=True)
-    
+    print(f"  [AMEX Plat] Raw rows from XLSX: {len(df)}, columns: {len(df.columns)}", file=sys.stderr)
+
+    # Auto-detect header row
+    header_row = _find_amex_header_row(df)
+    df.columns = df.iloc[header_row].values
+    df = df.iloc[header_row + 1:].reset_index(drop=True)
+
     # Rename columns for clarity
-    df.columns = ['Date', 'Receipt', 'Description', 'Card Member', 'Account', 'Amount', 'Extended Details', 'Statement Name', 'col8', 'col9', 'col10', 'col11', 'col12', 'col13']
-    
-    # Parse dates
-    df['Date'] = pd.to_datetime(df['Date'], format='%m/%d/%Y', errors='coerce')
+    col_count = len(df.columns)
+    base_cols = ['Date', 'Receipt', 'Description', 'Card Member', 'Account', 'Amount', 'Extended Details', 'Statement Name']
+    if col_count < len(base_cols):
+        base_cols = base_cols[:col_count]
+    df.columns = base_cols + [f'col{i}' for i in range(len(base_cols), col_count)]
+
+    # Parse dates and amounts
+    df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
     df['Amount'] = pd.to_numeric(df['Amount'], errors='coerce')
-    
-    # Filter to February 2026
-    feb_mask = (df['Date'].dt.month == PERIOD_MONTH) & (df['Date'].dt.year == PERIOD_YEAR)
-    df = df[feb_mask].reset_index(drop=True)
-    
-    # Add source and normalize amount (AMEX shows negative for charges)
+
+    # Drop rows with no valid date
+    df = df.dropna(subset=['Date']).reset_index(drop=True)
+
+    # Add source and normalize amount
     df['source'] = 'AMEX Platinum 62002'
     df['normalized_amount'] = df['Amount'].abs()
-    
+
+    print(f"  [AMEX Plat] Loaded {len(df)} transactions", file=sys.stderr)
     return df
 
 def load_amex_delta():
-    """Load AMEX Delta activity"""
+    """Load AMEX Delta activity — all transactions, no month filtering."""
     path = os.path.join(UPLOADS_DIR, "amex_delta.xlsx")
     df = pd.read_excel(path, header=None)
+    print(f"  [AMEX Delta] Raw rows from XLSX: {len(df)}, columns: {len(df.columns)}", file=sys.stderr)
 
-    # Use row 6 as header
-    df.columns = df.iloc[6].values
-    df = df.iloc[7:].reset_index(drop=True)
+    # Auto-detect header row
+    header_row = _find_amex_header_row(df)
+    df.columns = df.iloc[header_row].values
+    df = df.iloc[header_row + 1:].reset_index(drop=True)
 
     # Rename columns
-    df.columns = ['Date', 'Receipt', 'Description', 'Card Member', 'Account', 'Amount', 'Extended Details', 'Statement Name', 'col8', 'col9', 'col10', 'col11', 'col12', 'col13']
+    col_count = len(df.columns)
+    base_cols = ['Date', 'Receipt', 'Description', 'Card Member', 'Account', 'Amount', 'Extended Details', 'Statement Name']
+    if col_count < len(base_cols):
+        base_cols = base_cols[:col_count]
+    df.columns = base_cols + [f'col{i}' for i in range(len(base_cols), col_count)]
 
-    # Parse dates
-    df['Date'] = pd.to_datetime(df['Date'], format='%m/%d/%Y', errors='coerce')
+    # Parse dates and amounts
+    df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
     df['Amount'] = pd.to_numeric(df['Amount'], errors='coerce')
 
-    # Filter to February 2026
-    feb_mask = (df['Date'].dt.month == PERIOD_MONTH) & (df['Date'].dt.year == PERIOD_YEAR)
-    df = df[feb_mask].reset_index(drop=True)
+    # Drop rows with no valid date
+    df = df.dropna(subset=['Date']).reset_index(drop=True)
 
     # Add source and normalize amount
     df['source'] = 'AMEX Delta 71003'
     df['normalized_amount'] = df['Amount'].abs()
 
+    print(f"  [AMEX Delta] Loaded {len(df)} transactions", file=sys.stderr)
     return df
 
 # Bank debit categories to EXCLUDE from matching (meta-transactions)
 BANK_EXCLUDED_PATTERNS = [
-    'PORO GUSTO',           # Bulk vendor aggregate payments
     'CHICK FIL A PR',       # CFA corporate debits (royalties, marketing)
     'CHASE CREDIT CRD',     # CC bill payments
     'AMEX EPAYMENT',        # CC bill payments
@@ -231,17 +391,21 @@ BANK_EXCLUDED_PATTERNS = [
 ]
 
 def load_bank():
-    """Load Banco Popular bank statement - debits only, excluding meta-transactions"""
-    path = os.path.join(UPLOADS_DIR, "banco_current.csv")
+    """Load Banco Popular bank statement — all transactions, no month filtering.
+    Expected CSV columns: Date, Description, Amount
+    """
+    path = os.path.join(UPLOADS_DIR, "banco.csv")
     df = pd.read_csv(path)
+    print(f"  [Bank] Raw rows: {len(df)}, columns: {list(df.columns)}", file=sys.stderr)
 
     # Parse dates and amounts
     df['Date'] = pd.to_datetime(df['Date'], format='%m/%d/%Y', errors='coerce')
+    if df['Date'].isna().all():
+        df['Date'] = pd.to_datetime(pd.read_csv(path)['Date'], errors='coerce')
     df['Amount'] = pd.to_numeric(df['Amount'], errors='coerce')
 
-    # Filter to February 2026
-    feb_mask = (df['Date'].dt.month == PERIOD_MONTH) & (df['Date'].dt.year == PERIOD_YEAR)
-    df = df[feb_mask].reset_index(drop=True)
+    # Drop rows with no valid date
+    df = df.dropna(subset=['Date']).reset_index(drop=True)
 
     # Keep only debits (negative amounts)
     df = df[df['Amount'] < 0].reset_index(drop=True)
@@ -250,12 +414,14 @@ def load_bank():
     exclude_mask = pd.Series([False] * len(df))
     for pattern in BANK_EXCLUDED_PATTERNS:
         exclude_mask = exclude_mask | df['Description'].str.contains(pattern, case=False, na=False)
+    excluded_count = exclude_mask.sum()
     df = df[~exclude_mask].reset_index(drop=True)
 
     # Add source and normalize amount
     df['source'] = 'Banco Popular'
     df['normalized_amount'] = df['Amount'].abs()
 
+    print(f"  [Bank] Loaded {len(df)} debit transactions ({excluded_count} meta-txns excluded)", file=sys.stderr)
     return df
 
 # ============================================================================
@@ -547,67 +713,18 @@ def find_matches(expenses, chase_df, amex_plat_df, amex_delta_df, bank_df=None):
 
 print("Loading data...")
 expenses = load_expenses()
+print(f"  GASTOS expenses: {len(expenses)} rows (filtered to {MONTH_NAME} {PERIOD_YEAR})")
 chase_df = load_chase()
 amex_plat_df = load_amex_platinum()
 amex_delta_df = load_amex_delta()
 bank_df = load_bank()
 
-# Load January statements for cross-month matching
-jan_chase_path = os.path.join(WORK_DIR, 'jan_chase.csv')
-jan_amex_plat_path = os.path.join(WORK_DIR, 'jan_amex_plat.csv')
-jan_amex_delta_path = os.path.join(WORK_DIR, 'jan_amex_delta.csv')
-jan_bank_path = os.path.join(UPLOADS_DIR, 'banco_prior.csv')
-
-jan_count = 0
-if os.path.exists(jan_chase_path):
-    jan_chase = pd.read_csv(jan_chase_path)
-    jan_chase['Transaction Date'] = pd.to_datetime(jan_chase['Transaction Date'], format='%m/%d/%Y', errors='coerce')
-    jan_chase['Amount'] = pd.to_numeric(jan_chase['Amount'], errors='coerce')
-    jan_chase['source'] = 'Chase Ink 4348 (Jan)'
-    jan_chase['normalized_amount'] = jan_chase['Amount'].abs()
-    # Append to chase_df
-    chase_df = pd.concat([chase_df, jan_chase], ignore_index=True)
-    jan_count += len(jan_chase)
-
-if os.path.exists(jan_amex_plat_path):
-    jan_plat = pd.read_csv(jan_amex_plat_path)
-    jan_plat['Date'] = pd.to_datetime(jan_plat['Date'], format='%m/%d/%Y', errors='coerce')
-    jan_plat['Amount'] = pd.to_numeric(jan_plat['Amount'], errors='coerce')
-    jan_plat['source'] = 'AMEX Platinum 62002 (Jan)'
-    jan_plat['normalized_amount'] = jan_plat['Amount'].abs()
-    amex_plat_df = pd.concat([amex_plat_df, jan_plat], ignore_index=True)
-    jan_count += len(jan_plat)
-
-if os.path.exists(jan_amex_delta_path):
-    jan_delta = pd.read_csv(jan_amex_delta_path)
-    jan_delta['Date'] = pd.to_datetime(jan_delta['Date'], format='%m/%d/%Y', errors='coerce')
-    jan_delta['Amount'] = pd.to_numeric(jan_delta['Amount'], errors='coerce')
-    jan_delta['source'] = 'AMEX Delta 71003 (Jan)'
-    jan_delta['normalized_amount'] = jan_delta['Amount'].abs()
-    amex_delta_df = pd.concat([amex_delta_df, jan_delta], ignore_index=True)
-    jan_count += len(jan_delta)
-
-if os.path.exists(jan_bank_path):
-    jan_bank = pd.read_csv(jan_bank_path)
-    jan_bank['Date'] = pd.to_datetime(jan_bank['Date'], format='%m/%d/%Y', errors='coerce')
-    jan_bank['Amount'] = pd.to_numeric(jan_bank['Amount'], errors='coerce')
-    # Keep only debits, exclude meta-transactions
-    jan_bank = jan_bank[jan_bank['Amount'] < 0].reset_index(drop=True)
-    exclude_mask = pd.Series([False] * len(jan_bank))
-    for pattern in BANK_EXCLUDED_PATTERNS:
-        exclude_mask = exclude_mask | jan_bank['Description'].str.contains(pattern, case=False, na=False)
-    jan_bank = jan_bank[~exclude_mask].reset_index(drop=True)
-    jan_bank['source'] = 'Banco Popular (Jan)'
-    jan_bank['normalized_amount'] = jan_bank['Amount'].abs()
-    bank_df = pd.concat([bank_df, jan_bank], ignore_index=True)
-    jan_count += len(jan_bank)
-
-print(f"Expenses: {len(expenses)}")
-print(f"Chase (Feb+Jan): {len(chase_df)}")
-print(f"AMEX Plat (Feb+Jan): {len(amex_plat_df)}")
-print(f"AMEX Delta (Feb+Jan): {len(amex_delta_df)}")
-print(f"Bank debits (Feb+Jan): {len(bank_df)}")
-print(f"January transactions added: {jan_count}")
+print(f"\nData loaded — all transactions available for cross-month matching:")
+print(f"  Expenses ({MONTH_NAME}): {len(expenses)}")
+print(f"  Chase: {len(chase_df)}")
+print(f"  AMEX Plat: {len(amex_plat_df)}")
+print(f"  AMEX Delta: {len(amex_delta_df)}")
+print(f"  Bank debits: {len(bank_df)}")
 
 print("\nMatching expenses to statements...")
 matches, matched_indices = find_matches(expenses, chase_df, amex_plat_df, amex_delta_df, bank_df)
@@ -643,12 +760,16 @@ for m in matches:
 
 unmatched_cc_charges = []
 
-# Chase unmatched (Feb only — Jan data is for matching only)
+# Helper: check if a date falls in the target period month
+def _is_period_month(dt):
+    return dt.month == PERIOD_MONTH and dt.year == PERIOD_YEAR
+
+# Chase unmatched (period month only — other months available for matching but not listed as unmatched)
 for _, row in chase_df.iterrows():
     if row['Amount'] >= 0:
         continue  # skip payments
-    if '(Jan)' in str(row.get('source', '')):
-        continue  # skip January transactions from unmatched list
+    if not _is_period_month(row['Transaction Date']):
+        continue
     key = ('Chase Ink 4348', row['Transaction Date'].strftime('%Y-%m-%d'), float(row['normalized_amount']))
     if key not in matched_cc_keys:
         unmatched_cc_charges.append({
@@ -659,12 +780,12 @@ for _, row in chase_df.iterrows():
             'category': str(row.get('Category', ''))
         })
 
-# AMEX Platinum unmatched (Feb only)
+# AMEX Platinum unmatched (period month only)
 for _, row in amex_plat_df.iterrows():
     if row['Amount'] < 0:
         continue  # skip payments/credits
-    if '(Jan)' in str(row.get('source', '')):
-        continue  # skip January transactions from unmatched list
+    if not _is_period_month(row['Date']):
+        continue
     key = ('AMEX Platinum 62002', row['Date'].strftime('%Y-%m-%d'), float(row['normalized_amount']))
     if key not in matched_cc_keys:
         desc = row.get('Description', '')
@@ -680,12 +801,12 @@ for _, row in amex_plat_df.iterrows():
             'category': str(row.get('col13', '')) if pd.notna(row.get('col13', '')) else ''
         })
 
-# AMEX Delta unmatched (Feb only)
+# AMEX Delta unmatched (period month only)
 for _, row in amex_delta_df.iterrows():
     if row['Amount'] < 0:
         continue  # skip payments/credits
-    if '(Jan)' in str(row.get('source', '')):
-        continue  # skip January transactions from unmatched list
+    if not _is_period_month(row['Date']):
+        continue
     key = ('AMEX Delta 71003', row['Date'].strftime('%Y-%m-%d'), float(row['normalized_amount']))
     if key not in matched_cc_keys:
         desc = row.get('Description', '')
@@ -701,10 +822,10 @@ for _, row in amex_delta_df.iterrows():
             'category': str(row.get('col13', '')) if pd.notna(row.get('col13', '')) else ''
         })
 
-# Banco Popular bank debits unmatched (Feb only)
+# Banco Popular bank debits unmatched (period month only)
 for _, row in bank_df.iterrows():
-    if '(Jan)' in str(row.get('source', '')):
-        continue  # skip January transactions from unmatched list
+    if not _is_period_month(row['Date']):
+        continue
     key = ('Banco Popular', row['Date'].strftime('%Y-%m-%d'), float(row['normalized_amount']))
     if key not in matched_cc_keys:
         unmatched_cc_charges.append({
@@ -729,6 +850,17 @@ BULK_VENDOR_CANONICAL = {
 cc_by_vendor = {v: [] for v in BULK_VENDORS}
 cc_non_bulk = []  # CC charges not related to any bulk vendor
 
+# Build amount lookup for bulk vendor GASTOS entries (for Poro Gusto matching)
+# Group unmatched bulk expenses by vendor, tracking individual and cumulative amounts
+_bulk_amounts_by_vendor = {}
+for v in BULK_VENDORS:
+    vendor_expenses = [e for e in unmatched_expenses_bulk if e['vendor'].strip() == v]
+    amounts = [e['amount'] for e in vendor_expenses]
+    # Include individual amounts and total
+    _bulk_amounts_by_vendor[v] = set(round(a, 2) for a in amounts)
+    if len(amounts) > 1:
+        _bulk_amounts_by_vendor[v].add(round(sum(amounts), 2))
+
 # Filter out micro-charges < $4 and classify by vendor
 MIN_CC_AMOUNT = 4.00
 
@@ -745,6 +877,15 @@ for cc in unmatched_cc_charges:
                 cc_by_vendor[vn].append(cc)
             assigned = True
             break
+    # For Poro Gusto payments: match by amount to bulk vendor GASTOS
+    if not assigned and 'poro gusto' in desc.lower():
+        cc_amount = round(cc['amount'], 2)
+        for v in BULK_VENDORS:
+            if cc_amount in _bulk_amounts_by_vendor[v]:
+                cc_by_vendor[v].append(cc)
+                assigned = True
+                print(f"  [Poro Gusto] ${cc_amount:,.2f} → {v} (amount match)", file=sys.stderr)
+                break
     if not assigned:
         cc_non_bulk.append(cc)
 
@@ -771,7 +912,7 @@ matched_pct = (len(matches) / len(expenses) * 100) if len(expenses) > 0 else 0
 all_unmatched_expenses = unmatched_expenses_bulk + unmatched_expenses_other
 
 summary = {
-    'period': f'February {PERIOD_YEAR}',
+    'period': f'{MONTH_NAME} {PERIOD_YEAR}',
     'total_expenses': float(total_expenses),
     'total_transactions': len(expenses),
     'total_matched': len(matches),
@@ -785,9 +926,9 @@ summary = {
     'bulk_amount': float(sum(e['amount'] for e in unmatched_expenses_bulk)),
     'other_unmatched_amount': float(sum(e['amount'] for e in unmatched_expenses_other)),
     'cc_unmatched_amount': float(sum(c['amount'] for c in unmatched_cc_charges)),
-    'chase_charges': len(chase_df[chase_df['Amount'] < 0]),
-    'amex_plat_charges': len(amex_plat_df),
-    'amex_delta_charges': len(amex_delta_df),
+    'chase_charges': len(chase_df[(chase_df['Amount'] < 0) & (chase_df['Transaction Date'].dt.month == PERIOD_MONTH) & (chase_df['Transaction Date'].dt.year == PERIOD_YEAR)]),
+    'amex_plat_charges': len(amex_plat_df[(amex_plat_df['Amount'] > 0) & (amex_plat_df['Date'].dt.month == PERIOD_MONTH) & (amex_plat_df['Date'].dt.year == PERIOD_YEAR)]),
+    'amex_delta_charges': len(amex_delta_df[(amex_delta_df['Amount'] > 0) & (amex_delta_df['Date'].dt.month == PERIOD_MONTH) & (amex_delta_df['Date'].dt.year == PERIOD_YEAR)]),
 }
 
 # Category breakdown
@@ -803,19 +944,23 @@ for m in matches:
     tier_counts[tier_key] = tier_counts.get(tier_key, 0) + 1
     tier_amounts[tier_key] = tier_amounts.get(tier_key, 0) + m['exp_amount']
 
-# Per-card summary
+# Per-card summary (period month only)
+chase_period = chase_df[(chase_df['Amount'] < 0) & (chase_df['Transaction Date'].dt.month == PERIOD_MONTH) & (chase_df['Transaction Date'].dt.year == PERIOD_YEAR)]
+plat_period = amex_plat_df[(amex_plat_df['Amount'] > 0) & (amex_plat_df['Date'].dt.month == PERIOD_MONTH) & (amex_plat_df['Date'].dt.year == PERIOD_YEAR)]
+delta_period = amex_delta_df[(amex_delta_df['Amount'] > 0) & (amex_delta_df['Date'].dt.month == PERIOD_MONTH) & (amex_delta_df['Date'].dt.year == PERIOD_YEAR)]
+
 card_summary = {
     'Chase Ink 4348': {
-        'count': len(chase_df[chase_df['Amount'] < 0]),
-        'total': float(abs(chase_df[chase_df['Amount'] < 0]['Amount'].sum())) if len(chase_df) > 0 else 0.0
+        'count': len(chase_period),
+        'total': float(abs(chase_period['Amount'].sum())) if len(chase_period) > 0 else 0.0
     },
     'AMEX Platinum 62002': {
-        'count': len(amex_plat_df),
-        'total': float(amex_plat_df['normalized_amount'].sum()) if len(amex_plat_df) > 0 else 0.0
+        'count': len(plat_period),
+        'total': float(plat_period['normalized_amount'].sum()) if len(plat_period) > 0 else 0.0
     },
     'AMEX Delta 71003': {
-        'count': len(amex_delta_df),
-        'total': float(amex_delta_df['normalized_amount'].sum()) if len(amex_delta_df) > 0 else 0.0
+        'count': len(delta_period),
+        'total': float(delta_period['normalized_amount'].sum()) if len(delta_period) > 0 else 0.0
     }
 }
 
@@ -1309,7 +1454,7 @@ html_content = f"""<!DOCTYPE html>
         </div>
 
         <!-- Summary Cards Row 1 -->
-        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
+        <div id="section-summary" class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
             <div class="card bg-white p-5">
                 <h3 class="text-gray-500 text-xs font-semibold uppercase mb-1">Total Gastos</h3>
                 <p class="text-2xl font-bold text-gray-900">${summary['total_expenses']:,.2f}</p>
@@ -1338,7 +1483,7 @@ html_content = f"""<!DOCTYPE html>
         </div>
 
         <!-- Reconciliation Progress Bar -->
-        <div class="card bg-white p-5 mb-4">
+        <div id="section-progress" class="card bg-white p-5 mb-4">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                 <h3 class="text-sm font-bold text-gray-700">Reconciliation Progress</h3>
                 <div style="display:flex; gap:16px; font-size:0.8rem;">
@@ -1357,7 +1502,7 @@ html_content = f"""<!DOCTYPE html>
         </div>
 
         <!-- Global Search -->
-        <div class="card bg-white p-4 mb-4 no-print">
+        <div id="section-search" class="card bg-white p-4 mb-4 no-print">
             <div class="global-search-container">
                 <span class="global-search-icon">&#128269;</span>
                 <input type="text" class="global-search-input" id="globalSearch" placeholder="Search across all sections — vendors, descriptions, amounts..." onkeyup="globalSearchHandler()" onfocus="globalSearchHandler()">
@@ -1366,7 +1511,7 @@ html_content = f"""<!DOCTYPE html>
         </div>
 
         <!-- Charts Row -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div id="section-charts" class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             <div class="card bg-white p-6">
                 <h2 class="text-lg font-bold text-gray-900 mb-4">Expense Categories</h2>
                 <div class="chart-container"><canvas id="categoryChart"></canvas></div>
@@ -1378,7 +1523,7 @@ html_content = f"""<!DOCTYPE html>
         </div>
 
         <!-- Card Summary -->
-        <div class="card bg-white p-6 mb-8">
+        <div id="section-cards" class="card bg-white p-6 mb-8">
             <h2 class="text-lg font-bold text-gray-900 mb-4">Credit Card Summary</h2>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div class="border-l-4 border-blue-500 pl-4">
@@ -1409,7 +1554,7 @@ html_content = f"""<!DOCTYPE html>
         <div id="reconTab">
 
         <!-- ======== SECTION 1: MATCHED TRANSACTIONS ======== -->
-        <div class="card bg-white p-6 mb-8">
+        <div id="section-matched" class="card bg-white p-6 mb-8">
             <div class="section-header" onclick="toggleSection('matched')">
                 <span class="collapse-chevron" id="chevron_matched">▼</span>
                 <h2 class="text-lg font-bold text-gray-900 mb-0">Matched Transactions <span class="section-count">{len(matches)}</span></h2>
@@ -1446,17 +1591,17 @@ html_content = f"""<!DOCTYPE html>
             <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
                 <div style="flex:1; min-width:200px;">
                     <span style="font-weight:700; color:#1e40af; font-size:0.9rem;">Manual Match</span>
-                    <button id="reconModeToggle" onclick="toggleReconMode()" style="padding:4px 12px; background:#e0e7ff; color:#3730a3; border:1px solid #a5b4fc; border-radius:6px; font-size:0.78rem; font-weight:600; cursor:pointer; margin-left:8px;">Mode: GASTOS → CC</button>
-                    <span id="reconMatchLabel" style="font-size:0.85rem; color:#4b5563; margin-left:8px;">Click GASTOS rows to select, then click a CC charge to link</span>
+                    <span id="reconMatchLabel" style="font-size:0.85rem; color:#4b5563; margin-left:8px;">Select GASTOS rows and CC charges, then confirm to link them</span>
                 </div>
                 <div id="reconMatchStats" style="font-size:0.85rem; font-weight:600; color:#059669; display:none;"></div>
+                <button id="reconConfirmBtn" onclick="confirmReconMatch()" style="display:none; padding:6px 14px; background:#059669; color:white; border:none; border-radius:6px; font-size:0.8rem; font-weight:600; cursor:pointer;">Confirm Match</button>
                 <button id="reconCancelBtn" onclick="cancelReconSelection()" style="display:none; padding:6px 14px; background:#ef4444; color:white; border:none; border-radius:6px; font-size:0.8rem; font-weight:600; cursor:pointer;">Cancel</button>
                 <span id="reconMatchedCount" style="font-size:0.85rem; font-weight:600; color:#059669;"></span>
             </div>
         </div>
 
         <!-- ======== SECTION 3: UNMATCHED GASTOS (Other) ======== -->
-        <div class="card bg-white p-6 mb-8">
+        <div id="section-other" class="card bg-white p-6 mb-8">
             <div class="section-header" onclick="toggleSection('other')">
                 <span class="collapse-chevron" id="chevron_other">▼</span>
                 <h2 class="text-lg font-bold text-red-700 mb-0">Unmatched Gastos (No CC/Bank Match) <span class="section-count" id="otherSectionCount">{len(unmatched_expenses_other)}</span></h2>
@@ -1488,13 +1633,13 @@ html_content = f"""<!DOCTYPE html>
         </div>
 
         <!-- ======== SECTION 4: CC/BANK CHARGES WITHOUT RECEIPT ======== -->
-        <div class="card bg-white p-6 mb-8">
+        <div id="section-cc" class="card bg-white p-6 mb-8">
             <div class="section-header" onclick="toggleSection('cc')">
                 <span class="collapse-chevron" id="chevron_cc">▼</span>
                 <h2 class="text-lg font-bold text-purple-700 mb-0">CC Charges Missing from Gastos <span class="section-count" id="ccSectionCount">{len(unmatched_cc_charges)}</span></h2>
             </div>
             <div class="section-body" id="body_cc">
-            <p class="text-sm text-gray-500 mb-4 mt-1">Charges on credit card statements that have no matching expense receipt. Click to link with selected GASTOS rows above. Total: <strong>${summary['cc_unmatched_amount']:,.2f}</strong></p>
+            <p class="text-sm text-gray-500 mb-4 mt-1">Charges on credit card statements that have no matching expense receipt. Click to select, then use the Confirm Match button above to link with selected GASTOS rows. Total: <strong>${summary['cc_unmatched_amount']:,.2f}</strong></p>
             <div class="filter-bar">
                 <div><label>Search</label><br><input type="text" id="ccSearch" placeholder="Description..." onkeyup="filterTable('cc')"></div>
                 <div><label>Source</label><br><select id="ccSourceFilter" onchange="filterTable('cc')"><option value="">All Sources</option><option value="Chase">Chase Ink</option><option value="AMEX Platinum">AMEX Platinum</option><option value="AMEX Delta">AMEX Delta</option><option value="Banco Popular">Banco Popular</option></select></div>
@@ -1519,7 +1664,7 @@ html_content = f"""<!DOCTYPE html>
         </div>
 
         <!-- ======== CROSS-MONTH TRANSFERS ======== -->
-        <div class="card bg-white p-6 mb-8" style="border-left:4px solid #f59e0b;">
+        <div id="section-movedIn" class="card bg-white p-6 mb-8" style="border-left:4px solid #f59e0b;">
             <div class="section-header" onclick="toggleSection('movedIn')">
                 <span class="collapse-chevron" id="chevron_movedIn">▼</span>
                 <h2 class="text-lg font-bold text-amber-700 mb-0">Incoming from Other Months <span class="section-count" id="movedInBadge">0</span></h2>
@@ -1543,7 +1688,7 @@ html_content = f"""<!DOCTYPE html>
             </div>
         </div>
 
-        <div class="card bg-white p-6 mb-8" style="border-left:4px solid #6366f1;">
+        <div id="section-movedOut" class="card bg-white p-6 mb-8" style="border-left:4px solid #6366f1;">
             <div class="section-header" onclick="toggleSection('movedOut')">
                 <span class="collapse-chevron" id="chevron_movedOut">▼</span>
                 <h2 class="text-lg font-bold text-indigo-700 mb-0">Moved to Other Months <span class="section-count" id="movedOutBadge">0</span></h2>
@@ -1568,7 +1713,7 @@ html_content = f"""<!DOCTYPE html>
         </div>
 
         <!-- ======== SECTION 5: REVIEWED - NO GASTOS MATCH EXPECTED ======== -->
-        <div class="card reviewed-section p-6 mb-8">
+        <div id="section-reviewed" class="card reviewed-section p-6 mb-8">
             <div class="section-header" onclick="toggleSection('reviewed')">
                 <span class="collapse-chevron" id="chevron_reviewed">▼</span>
                 <h2 class="text-lg font-bold mb-0">Reviewed - No GASTOS Match Expected <span class="section-count" id="reviewedBadge">0</span></h2>
@@ -1711,7 +1856,7 @@ html_content = f"""<!DOCTYPE html>
             <p class="text-sm text-blue-800 mb-2"><strong>Bulk Vendors:</strong> Coca Cola, Freshpoint, Holsum, PR Coffee, and Tres Monjitas are paid via the PORO GUSTO aggregate vendor payment system visible on the bank statement, not individual CC charges.</p>
             <p class="text-sm text-blue-800 mb-2"><strong>Bank EFT Payments:</strong> EFT debits (Delta Dental, Triple-S, Dept de Hacienda, Mutual of Omaha, etc.) appear in the CC Charges Missing section as Banco Popular source for manual matching.</p>
             <p class="text-sm text-blue-800 mb-2"><strong>ACH/Bank Transfers:</strong> TRANF ATHM employee payments and TELEPAGO transfers appear in CC Charges Missing as Banco Popular source.</p>
-            <p class="text-sm text-blue-800 mb-2"><strong>Excluded Bank Transactions:</strong> CC bill payments (Chase/AMEX), PORO GUSTO vendor aggregate, BPPR merchant fees, and AMEX discount fees are excluded from matching (they are meta-transactions).</p>
+            <p class="text-sm text-blue-800 mb-2"><strong>Excluded Bank Transactions:</strong> CC bill payments (Chase/AMEX), CFA corporate debits, BPPR merchant fees, BPPR currency cash, and AMEX discount fees are excluded from matching (meta-transactions). Poro Gusto vendor payments are included for matching.</p>
             <p class="text-sm text-blue-800"><strong>CC Charges Without Receipt:</strong> Some CC charges are personal/travel expenses (hotels, restaurants) or items not yet entered in GASTOS (SYSCO orders, Costco, etc.).</p>
         </div>
 
@@ -1849,8 +1994,7 @@ html_content = f"""<!DOCTYPE html>
         // ===== NON-BULK MANUAL MATCHING STATE =====
         const RECON_MATCH_KEY = 'cfa_recon_{PERIOD_KEY}_other_matches';
         let reconSelectedGastos = [];  // array of {{ idx, row }}
-        let reconSelectedCC = [];      // array of {{ idx, row }} (for CC→GASTOS mode)
-        let reconMode = 'gastos_to_cc';  // 'gastos_to_cc' or 'cc_to_gastos'
+        let reconSelectedCC = [];      // array of {{ idx, row }}
 
         function getReconMatches() {{
             try {{ return JSON.parse(localStorage.getItem(RECON_MATCH_KEY) || '[]'); }}
@@ -1876,58 +2020,39 @@ html_content = f"""<!DOCTYPE html>
             return {{ otherToMatch, ccToMatch, matches }};
         }}
 
-        function toggleReconMode() {{
-            cancelReconSelection();
-            reconMode = reconMode === 'gastos_to_cc' ? 'cc_to_gastos' : 'gastos_to_cc';
-            const btn = document.getElementById('reconModeToggle');
-            if (reconMode === 'gastos_to_cc') {{
-                btn.textContent = 'Mode: GASTOS → CC';
-                btn.style.background = '#e0e7ff';
-                btn.style.color = '#3730a3';
-                btn.style.borderColor = '#a5b4fc';
-            }} else {{
-                btn.textContent = 'Mode: CC → GASTOS';
-                btn.style.background = '#fce7f3';
-                btn.style.color = '#9d174d';
-                btn.style.borderColor = '#f9a8d4';
+        function confirmReconMatch() {{
+            if (reconSelectedGastos.length === 0 || reconSelectedCC.length === 0) {{
+                showToast('Select at least one GASTOS row and one CC charge', 'error');
+                return;
             }}
+            const matches = getReconMatches();
+            const gastosTotal = reconSelectedGastos.reduce((s, g) => s + g.row.amount, 0);
+            const ccTotal = reconSelectedCC.reduce((s, c) => s + c.row.amount, 0);
+            matches.push({{
+                gastos_indices: reconSelectedGastos.map(g => g.idx),
+                gastos_amounts: reconSelectedGastos.map(g => g.row.amount),
+                gastos_vendors: reconSelectedGastos.map(g => g.row.vendor),
+                gastos_total: gastosTotal,
+                cc_indices: reconSelectedCC.map(c => c.idx),
+                cc_amounts: reconSelectedCC.map(c => c.row.amount),
+                cc_descriptions: reconSelectedCC.map(c => c.row.description),
+                cc_sources: reconSelectedCC.map(c => c.row.source),
+                cc_total: ccTotal,
+                diff: Math.round((gastosTotal - ccTotal) * 100) / 100,
+                timestamp: new Date().toISOString()
+            }});
+            saveReconMatches(matches);
+            reconSelectedGastos = [];
+            reconSelectedCC = [];
             updateReconToolbar();
+            filterTable('matched');
             filterTable('other');
             filterTable('cc');
+            showToast('Match linked successfully! (' + matches[matches.length-1].gastos_indices.length + ' GASTOS + ' + matches[matches.length-1].cc_indices.length + ' CC)');
         }}
 
         function selectReconGastos(idx, row) {{
-            if (reconMode === 'cc_to_gastos') {{
-                // In CC→GASTOS mode, clicking a GASTOS row completes the link
-                if (reconSelectedCC.length === 0) {{
-                    showToast('Select CC charges first, then click a GASTOS expense to link', 'error');
-                    return;
-                }}
-                const matches = getReconMatches();
-                const ccTotal = reconSelectedCC.reduce((s, c) => s + c.row.amount, 0);
-                matches.push({{
-                    gastos_indices: [idx],
-                    gastos_amounts: [row.amount],
-                    gastos_vendors: [row.vendor],
-                    gastos_total: row.amount,
-                    cc_indices: reconSelectedCC.map(c => c.idx),
-                    cc_amounts: reconSelectedCC.map(c => c.row.amount),
-                    cc_descriptions: reconSelectedCC.map(c => c.row.description),
-                    cc_sources: reconSelectedCC.map(c => c.row.source),
-                    cc_total: ccTotal,
-                    diff: Math.round((row.amount - ccTotal) * 100) / 100,
-                    timestamp: new Date().toISOString()
-                }});
-                saveReconMatches(matches);
-                reconSelectedCC = [];
-                updateReconToolbar();
-                filterTable('matched');
-                filterTable('other');
-                filterTable('cc');
-                showToast('Match linked successfully!');
-                return;
-            }}
-            // GASTOS→CC mode: toggle GASTOS selection
+            // Toggle GASTOS selection (multi-select)
             const existingIdx = reconSelectedGastos.findIndex(s => s.idx === idx);
             if (existingIdx >= 0) {{
                 reconSelectedGastos.splice(existingIdx, 1);
@@ -1940,45 +2065,16 @@ html_content = f"""<!DOCTYPE html>
         }}
 
         function selectReconCC(ccIdx, ccRow) {{
-            if (reconMode === 'cc_to_gastos') {{
-                // Toggle CC selection
-                const existingIdx = reconSelectedCC.findIndex(s => s.idx === ccIdx);
-                if (existingIdx >= 0) {{
-                    reconSelectedCC.splice(existingIdx, 1);
-                }} else {{
-                    reconSelectedCC.push({{ idx: ccIdx, row: ccRow }});
-                }}
-                updateReconToolbar();
-                filterTable('other');
-                filterTable('cc');
-                return;
+            // Toggle CC selection (multi-select)
+            const existingIdx = reconSelectedCC.findIndex(s => s.idx === ccIdx);
+            if (existingIdx >= 0) {{
+                reconSelectedCC.splice(existingIdx, 1);
+            }} else {{
+                reconSelectedCC.push({{ idx: ccIdx, row: ccRow }});
             }}
-            // GASTOS→CC mode: clicking CC completes the link
-            if (reconSelectedGastos.length === 0) {{
-                showToast('Select GASTOS rows first, then click a CC charge to link', 'error');
-                return;
-            }}
-            const matches = getReconMatches();
-            const gastosTotal = reconSelectedGastos.reduce((s, g) => s + g.row.amount, 0);
-            matches.push({{
-                gastos_indices: reconSelectedGastos.map(g => g.idx),
-                gastos_amounts: reconSelectedGastos.map(g => g.row.amount),
-                gastos_vendors: reconSelectedGastos.map(g => g.row.vendor),
-                gastos_total: gastosTotal,
-                cc_idx: ccIdx,
-                cc_amount: ccRow.amount,
-                cc_description: ccRow.description,
-                cc_source: ccRow.source,
-                diff: Math.round((gastosTotal - ccRow.amount) * 100) / 100,
-                timestamp: new Date().toISOString()
-            }});
-            saveReconMatches(matches);
-            reconSelectedGastos = [];
             updateReconToolbar();
-            filterTable('matched');
             filterTable('other');
             filterTable('cc');
-            showToast('Match linked successfully!');
         }}
 
         function unmatchReconGroup(matchIdx) {{
@@ -2001,35 +2097,46 @@ html_content = f"""<!DOCTYPE html>
         function updateReconToolbar() {{
             const label = document.getElementById('reconMatchLabel');
             const stats = document.getElementById('reconMatchStats');
+            const confirmBtn = document.getElementById('reconConfirmBtn');
             const cancelBtn = document.getElementById('reconCancelBtn');
             const countLabel = document.getElementById('reconMatchedCount');
             const lookup = buildReconMatchLookup();
             const totalMatched = lookup.matches.reduce((s, m) => s + (m.gastos_indices || []).length, 0);
 
-            if (reconMode === 'gastos_to_cc') {{
-                if (reconSelectedGastos.length === 0) {{
-                    label.textContent = 'Click GASTOS rows to select, then click a CC charge to link';
-                    stats.style.display = 'none';
-                    cancelBtn.style.display = 'none';
-                }} else {{
-                    const total = reconSelectedGastos.reduce((s, g) => s + g.row.amount, 0);
-                    label.textContent = `${{reconSelectedGastos.length}} GASTOS selected`;
-                    stats.textContent = `Total: ${{fmtMoney(total)}} — now click a CC charge to link`;
-                    stats.style.display = 'inline';
-                    cancelBtn.style.display = 'inline-block';
-                }}
+            const gCount = reconSelectedGastos.length;
+            const cCount = reconSelectedCC.length;
+
+            if (gCount === 0 && cCount === 0) {{
+                label.textContent = 'Select GASTOS rows and CC charges, then confirm to link them';
+                stats.style.display = 'none';
+                confirmBtn.style.display = 'none';
+                cancelBtn.style.display = 'none';
             }} else {{
-                if (reconSelectedCC.length === 0) {{
-                    label.textContent = 'Click CC charges to select, then click a GASTOS expense to link';
-                    stats.style.display = 'none';
-                    cancelBtn.style.display = 'none';
-                }} else {{
-                    const total = reconSelectedCC.reduce((s, c) => s + c.row.amount, 0);
-                    label.textContent = `${{reconSelectedCC.length}} CC charges selected`;
-                    stats.textContent = `Total: ${{fmtMoney(total)}} — now click a GASTOS expense to link`;
-                    stats.style.display = 'inline';
-                    cancelBtn.style.display = 'inline-block';
+                const parts = [];
+                if (gCount > 0) {{
+                    const gTotal = reconSelectedGastos.reduce((s, g) => s + g.row.amount, 0);
+                    parts.push(`${{gCount}} GASTOS (${{fmtMoney(gTotal)}})`);
                 }}
+                if (cCount > 0) {{
+                    const cTotal = reconSelectedCC.reduce((s, c) => s + c.row.amount, 0);
+                    parts.push(`${{cCount}} CC (${{fmtMoney(cTotal)}})`);
+                }}
+                label.textContent = parts.join(' + ') + ' selected';
+
+                if (gCount > 0 && cCount > 0) {{
+                    const gTotal = reconSelectedGastos.reduce((s, g) => s + g.row.amount, 0);
+                    const cTotal = reconSelectedCC.reduce((s, c) => s + c.row.amount, 0);
+                    const diff = Math.round((gTotal - cTotal) * 100) / 100;
+                    const diffLabel = diff === 0 ? 'exact match!' : `diff: ${{fmtMoney(Math.abs(diff))}}`;
+                    stats.textContent = diffLabel;
+                    stats.style.display = 'inline';
+                    confirmBtn.style.display = 'inline-block';
+                }} else {{
+                    stats.textContent = gCount > 0 ? 'now select CC charges' : 'now select GASTOS rows';
+                    stats.style.display = 'inline';
+                    confirmBtn.style.display = 'none';
+                }}
+                cancelBtn.style.display = 'inline-block';
             }}
             countLabel.textContent = totalMatched > 0 ? `${{totalMatched}} items manually matched (${{lookup.matches.length}} groups)` : '';
         }}
@@ -2211,7 +2318,6 @@ html_content = f"""<!DOCTYPE html>
             tbody.innerHTML = '';
             const reviewed = getReviewed();
             const lookup = buildReconMatchLookup();
-            const hasCCSelection = reconSelectedCC.length > 0;
             let visibleCount = 0;
 
             data.forEach((row, i) => {{
@@ -2227,19 +2333,6 @@ html_content = f"""<!DOCTYPE html>
 
                 if (matchInfo) {{
                     return;  // Hide matched items — they appear in Matched Transactions section
-                }} else if (reconMode === 'cc_to_gastos' && hasCCSelection) {{
-                    tr.className = 'recon-cc-clickable';
-                    tr.onclick = () => selectReconGastos(i, row);
-                    tr.innerHTML = `
-                        <td style="text-align:center"><input type="checkbox" class="review-cb" data-key="${{key}}" data-section="other" data-idx="${{i}}" onchange="markReviewed(this)" onclick="event.stopPropagation()"></td>
-                        <td>${{row.date}}</td>
-                        <td><strong>${{escapeHtml(row.vendor)}}</strong></td>
-                        <td>${{escapeHtml(row.category)}}</td>
-                        <td style="text-align:right"><strong>${{fmtMoney(row.amount)}}</strong></td>
-                        <td>${{escapeHtml(row.invoice)}}</td>
-                        ${{agingCell}}
-                        <td style="text-align:center"><span style="color:#7c3aed; font-weight:600; font-size:0.8rem;">Click to link</span></td>
-                    `;
                 }} else if (isSelected) {{
                     tr.className = 'recon-selected recon-selectable';
                     tr.onclick = () => selectReconGastos(i, row);
@@ -2251,9 +2344,9 @@ html_content = f"""<!DOCTYPE html>
                         <td style="text-align:right"><strong>${{fmtMoney(row.amount)}}</strong></td>
                         <td>${{escapeHtml(row.invoice)}}</td>
                         ${{agingCell}}
-                        <td style="text-align:center"><span style="color:#2563eb; font-weight:600; font-size:0.8rem;">Selected</span></td>
+                        <td style="text-align:center"><span style="color:#2563eb; font-weight:600; font-size:0.8rem;">&#10003; Selected</span></td>
                     `;
-                }} else if (reconMode === 'gastos_to_cc') {{
+                }} else {{
                     tr.className = 'recon-selectable';
                     tr.onclick = () => selectReconGastos(i, row);
                     tr.innerHTML = `
@@ -2266,22 +2359,14 @@ html_content = f"""<!DOCTYPE html>
                         ${{agingCell}}
                         <td style="text-align:center" onclick="event.stopPropagation();">${{moveBtn}}</td>
                     `;
-                }} else {{
-                    tr.innerHTML = `
-                        <td style="text-align:center"><input type="checkbox" class="review-cb" data-key="${{key}}" data-section="other" data-idx="${{i}}" onchange="markReviewed(this)"></td>
-                        <td>${{row.date}}</td>
-                        <td><strong>${{escapeHtml(row.vendor)}}</strong></td>
-                        <td>${{escapeHtml(row.category)}}</td>
-                        <td style="text-align:right"><strong>${{fmtMoney(row.amount)}}</strong></td>
-                        <td>${{escapeHtml(row.invoice)}}</td>
-                        ${{agingCell}}
-                        <td style="text-align:center">${{moveBtn}}</td>
-                    `;
                 }}
                 tbody.appendChild(tr);
                 visibleCount++;
             }});
             document.getElementById('otherCount').textContent = visibleCount + ' of ' + otherData.length + ' shown';
+            // Update section header badge to reflect remaining unreviewed count
+            const otherBadge = document.getElementById('otherSectionCount');
+            if (otherBadge) otherBadge.textContent = visibleCount;
         }}
 
         function populateCCTable(data) {{
@@ -2289,7 +2374,6 @@ html_content = f"""<!DOCTYPE html>
             tbody.innerHTML = '';
             const reviewed = getReviewed();
             const lookup = buildReconMatchLookup();
-            const hasGastosSelection = reconSelectedGastos.length > 0;
             const isCCSelected = (idx) => reconSelectedCC.some(s => s.idx === idx);
             let visibleCount = 0;
 
@@ -2305,7 +2389,7 @@ html_content = f"""<!DOCTYPE html>
 
                 if (matchInfo) {{
                     return;  // Hide matched items — they appear in Matched Transactions section
-                }} else if (reconMode === 'cc_to_gastos' && isCCSelected(i)) {{
+                }} else if (isCCSelected(i)) {{
                     tr.className = 'recon-selected recon-selectable';
                     tr.onclick = () => selectReconCC(i, row);
                     tr.innerHTML = `
@@ -2316,9 +2400,9 @@ html_content = f"""<!DOCTYPE html>
                         <td>${{sourceBadge(row.source)}}</td>
                         <td>${{escapeHtml(row.category || '')}}</td>
                         ${{agingCell}}
-                        <td style="text-align:center"><span style="color:#2563eb; font-weight:600; font-size:0.8rem;">Selected</span></td>
+                        <td style="text-align:center"><span style="color:#2563eb; font-weight:600; font-size:0.8rem;">&#10003; Selected</span></td>
                     `;
-                }} else if (reconMode === 'cc_to_gastos') {{
+                }} else {{
                     tr.className = 'recon-selectable';
                     tr.onclick = () => selectReconCC(i, row);
                     tr.innerHTML = `
@@ -2331,35 +2415,14 @@ html_content = f"""<!DOCTYPE html>
                         ${{agingCell}}
                         <td style="text-align:center" onclick="event.stopPropagation();">${{moveBtn}}</td>
                     `;
-                }} else if (hasGastosSelection) {{
-                    tr.className = 'recon-cc-clickable';
-                    tr.onclick = () => selectReconCC(i, row);
-                    tr.innerHTML = `
-                        <td style="text-align:center"><input type="checkbox" class="review-cb" data-key="${{key}}" data-section="cc" data-idx="${{i}}" onchange="markReviewed(this)" onclick="event.stopPropagation()"></td>
-                        <td>${{row.date}}</td>
-                        <td><strong>${{escapeHtml(row.description)}}</strong></td>
-                        <td style="text-align:right"><strong>${{fmtMoney(row.amount)}}</strong></td>
-                        <td>${{sourceBadge(row.source)}}</td>
-                        <td>${{escapeHtml(row.category || '')}}</td>
-                        ${{agingCell}}
-                        <td style="text-align:center"><span style="color:#7c3aed; font-weight:600; font-size:0.8rem;">Click to link</span></td>
-                    `;
-                }} else {{
-                    tr.innerHTML = `
-                        <td style="text-align:center"><input type="checkbox" class="review-cb" data-key="${{key}}" data-section="cc" data-idx="${{i}}" onchange="markReviewed(this)"></td>
-                        <td>${{row.date}}</td>
-                        <td><strong>${{escapeHtml(row.description)}}</strong></td>
-                        <td style="text-align:right"><strong>${{fmtMoney(row.amount)}}</strong></td>
-                        <td>${{sourceBadge(row.source)}}</td>
-                        <td>${{escapeHtml(row.category || '')}}</td>
-                        ${{agingCell}}
-                        <td style="text-align:center">${{moveBtn}}</td>
-                    `;
                 }}
                 tbody.appendChild(tr);
                 visibleCount++;
             }});
             document.getElementById('ccCount').textContent = visibleCount + ' of ' + ccData.length + ' shown';
+            // Update section header badge to reflect remaining unreviewed count
+            const ccBadge = document.getElementById('ccSectionCount');
+            if (ccBadge) ccBadge.textContent = visibleCount;
         }}
 
         // ===== MAIN TAB SWITCHING =====
@@ -3145,31 +3208,52 @@ html_content = f"""<!DOCTYPE html>
         // ===== RECONCILIATION PROGRESS =====
         function updateReconProgress() {{
             const reconMatches = getReconMatches();
-            const bulkMatches = (typeof getBulkMatches === 'function') ? getBulkMatches() : {{}};
-            // Count manual matches from non-bulk
+            const bulkMatches = (typeof getManualMatches === 'function') ? getManualMatches() : {{}};
+
+            // Count manual matches from non-bulk section
             const manualMatchedGastos = reconMatches.reduce((s, m) => s + (m.gastos_indices || []).length, 0);
-            // Count bulk manual matches
+            const manualMatchedGastosAmt = reconMatches.reduce((s, m) => s + (m.gastos_total || 0), 0);
+
+            // Count bulk vendor matches (manual matches from bulk section)
             let bulkManualMatched = 0;
+            let bulkManualAmt = 0;
             Object.values(bulkMatches).forEach(vendorMatches => {{
                 if (Array.isArray(vendorMatches)) {{
                     vendorMatches.forEach(m => {{
-                        bulkManualMatched += (m.gastos_indices || m.gastos_idx !== undefined ? (m.gastos_indices || [m.gastos_idx]).length : 0);
+                        const indices = m.gastos_indices || (m.gastos_idx !== undefined ? [m.gastos_idx] : []);
+                        bulkManualMatched += indices.length;
+                        bulkManualAmt += (m.gastos_total || m.gastos_amount || 0);
                     }});
                 }}
             }});
-            const reviewed = Object.keys(getReviewed()).length;
+
+            // Count reviewed items
+            const reviewedItems = Object.values(getReviewed());
+            const reviewed = reviewedItems.length;
+            const reviewedGastosAmt = reviewedItems
+                .filter(r => r.section === 'other' || r.section === 'bulk')
+                .reduce((s, r) => s + (r.amount || 0), 0);
+            const reviewedCCAmt = reviewedItems
+                .filter(r => r.section === 'cc')
+                .reduce((s, r) => s + (r.amount || 0), 0);
+
             const moved = getMovedItems();
             const movedOut = moved.out.length;
+            const movedOutGastosAmt = moved.out
+                .filter(m => m.section === 'other' || m.section === 'bulk')
+                .reduce((s, m) => s + ((m.item && m.item.amount) || 0), 0);
 
+            // Item counts — bulk GASTOS count as reconciled, moved items count as reconciled
             const autoMatched = matchedData.length;
-            const totalReconciled = autoMatched + manualMatchedGastos + bulkManualMatched + reviewed;
-            const totalItems = matchedData.length + otherData.length + ccData.length;
+            const bulkTotal = bulkData.length;
+            const totalReconciled = autoMatched + bulkTotal + manualMatchedGastos + reviewed + movedOut;
+            const totalItems = matchedData.length + otherData.length + ccData.length + bulkTotal;
             const pct = totalItems > 0 ? Math.round((totalReconciled / totalItems) * 100) : 0;
 
-            // Dollar variance
-            const matchedAmt = matchedData.reduce((s, r) => s + r.exp_amount, 0);
-            const manualAmt = reconMatches.reduce((s, m) => s + (m.gastos_total || 0), 0);
-            const totalReconciledAmt = matchedAmt + manualAmt;
+            // Dollar variance — bulk GASTOS $ counts as reconciled, moved GASTOS $ counts as reconciled
+            const autoMatchedAmt = matchedData.reduce((s, r) => s + r.exp_amount, 0);
+            const bulkAmt = bulkData.reduce((s, r) => s + (r.amount || 0), 0);
+            const totalReconciledAmt = autoMatchedAmt + bulkAmt + manualMatchedGastosAmt + reviewedGastosAmt + movedOutGastosAmt;
             const totalGastosAmt = {summary['total_expenses']};
             const unreconciledAmt = totalGastosAmt - totalReconciledAmt;
 
@@ -3183,9 +3267,9 @@ html_content = f"""<!DOCTYPE html>
             if (bar) bar.style.width = Math.min(pct, 100) + '%';
             if (label) label.textContent = pct + '% reconciled';
             if (pctEl) pctEl.textContent = totalReconciled + ' of ' + totalItems + ' items reconciled';
-            if (varianceEl) varianceEl.textContent = 'Unreconciled: ' + fmtMoney(unreconciledAmt);
-            if (detailEl) detailEl.textContent = `Auto: ${{autoMatched}} | Manual: ${{manualMatchedGastos}} | Bulk: ${{bulkManualMatched}} | Reviewed: ${{reviewed}} | Moved: ${{movedOut}}`;
-            if (varianceDetailEl) varianceDetailEl.textContent = `Reconciled $: ${{fmtMoney(totalReconciledAmt)}} of ${{fmtMoney(totalGastosAmt)}}`;
+            if (varianceEl) varianceEl.textContent = 'Unreconciled: ' + fmtMoney(Math.max(unreconciledAmt, 0));
+            if (detailEl) detailEl.textContent = `Auto: ${{autoMatched}} | Manual: ${{manualMatchedGastos}} | Bulk Vendors: ${{bulkTotal}} | Reviewed: ${{reviewed}} | Moved: ${{movedOut}}`;
+            if (varianceDetailEl) varianceDetailEl.textContent = `Reconciled $: ${{fmtMoney(totalReconciledAmt)}} of ${{fmtMoney(totalGastosAmt)}}${{reviewedCCAmt > 0 ? ' + ' + fmtMoney(reviewedCCAmt) + ' reviewed CC' : ''}}`;
         }}
 
         // ===== GLOBAL SEARCH =====
@@ -3368,6 +3452,36 @@ html_content = f"""<!DOCTYPE html>
                 catch(e) {{ console.error('Init error in ' + name + ':', e); }}
             }});
         }});
+
+        // Listen for messages from parent window (embedded iframe mode)
+        window.addEventListener('message', function(event) {{
+            if (!event.data || event.data.type !== 'recon-toggle-section') return;
+            const sectionId = event.data.sectionId;
+            const visible = event.data.visible;
+            const el = document.getElementById(sectionId);
+            if (el) {{
+                el.style.display = visible ? '' : 'none';
+            }}
+            // Special handling for main tab bar (bulk tab)
+            if (sectionId === 'section-bulk') {{
+                const tabBar = document.querySelector('.main-tab-bar');
+                if (tabBar) tabBar.style.display = visible ? '' : 'none';
+                const bulkTab = document.getElementById('bulkTab');
+                if (bulkTab) bulkTab.style.display = visible ? '' : 'none';
+            }}
+        }});
+
+        // Also handle header visibility toggle
+        window.addEventListener('message', function(event) {{
+            if (!event.data || event.data.type !== 'recon-toggle-header') return;
+            const header = document.querySelector('.mb-8');
+            if (header) header.style.display = event.data.visible ? '' : 'none';
+        }});
+
+        // Notify parent that report is loaded
+        if (window.parent !== window) {{
+            window.parent.postMessage({{ type: 'recon-report-ready' }}, '*');
+        }}
     </script>
 </body>
 </html>
