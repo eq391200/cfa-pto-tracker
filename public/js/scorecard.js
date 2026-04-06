@@ -349,55 +349,52 @@ ScorecardView.prototype.render = function() {
   this.renderSosTrendChart();
 };
 
-// ── SOS Trend Chart with YoY Diff Bar ───────────────────────────────
+// ── SOS Trend Chart (12 months + YoY label) ────────────────────────
 ScorecardView.prototype.renderSosTrendChart = async function() {
   var picker = document.getElementById(this.ids.monthPicker);
   var refMonth = picker ? picker.value : null;
   if (!refMonth) return;
 
-  var year = parseInt(refMonth.split('-')[0]);
-  var prevYear = year - 1;
-
-  // Fetch current year and prior year data
-  var curTrend, prevTrend;
+  // Fetch last 12 months
+  var sosTrend, allTrend;
   try {
-    var curRes = await fetch('/api/scorecard/data?period=year&month=' + refMonth);
-    var curData = await curRes.json();
-    curTrend = curData.trend && curData.trend.speed_of_service;
+    var sosRes = await fetch('/api/scorecard/data?period=year&month=' + refMonth);
+    var sosData = await sosRes.json();
+    sosTrend = sosData.trend && sosData.trend.speed_of_service;
+    allTrend = sosData.trend;
+  } catch(e) { return; }
+  if (!sosTrend || !sosTrend.length) return;
 
+  // Also fetch prior year for YoY comparison
+  var prevYear = parseInt(refMonth.split('-')[0]) - 1;
+  var prevMap = {};
+  try {
     var prevRefMonth = prevYear + refMonth.slice(4);
     var prevRes = await fetch('/api/scorecard/data?period=year&month=' + prevRefMonth);
     var prevData = await prevRes.json();
-    prevTrend = prevData.trend && prevData.trend.speed_of_service;
-  } catch(e) { return; }
-
-  if (!curTrend || !curTrend.length) return;
-
-  // Build month-keyed maps
-  var curMap = {}, prevMap = {};
-  for (var i = 0; i < curTrend.length; i++) {
-    var mm = curTrend[i].month.split('-')[1];
-    curMap[mm] = curTrend[i].value;
-  }
-  if (prevTrend) {
-    for (var j = 0; j < prevTrend.length; j++) {
-      var mm2 = prevTrend[j].month.split('-')[1];
-      prevMap[mm2] = prevTrend[j].value;
+    var prevTrend = prevData.trend && prevData.trend.speed_of_service;
+    if (prevTrend) {
+      for (var p = 0; p < prevTrend.length; p++) {
+        prevMap[prevTrend[p].month.split('-')[1]] = prevTrend[p].value;
+      }
     }
-  }
+  } catch(e) {}
 
-  var months = [];
-  var values = [], diffValues = [];
-  var endMM = parseInt(refMonth.split('-')[1]);
-  for (var m = 1; m <= endMM; m++) {
-    var key = String(m).padStart(2, '0');
-    months.push(SC_MONTH_NAMES[m - 1]);
-    var cur = curMap[key] != null ? curMap[key] : null;
-    var prev = prevMap[key] != null ? prevMap[key] : null;
-    values.push(cur);
-    // Diff in seconds: negative = faster, positive = slower
-    diffValues.push((cur != null && prev != null) ? cur - prev : null);
-  }
+  var last12 = sosTrend.slice(-12);
+  var values = last12.map(function(t) { return t.value != null ? t.value : null; });
+  var monthLabels = last12.map(function(t) {
+    var parts = t.month.split('-');
+    return SC_MONTH_NAMES[parseInt(parts[1]) - 1] + ' ' + parts[0].slice(2);
+  });
+
+  // Build YoY diff for each point
+  var diffLabels = last12.map(function(t) {
+    if (t.value == null) return null;
+    var mm = t.month.split('-')[1];
+    var prev = prevMap[mm];
+    if (prev == null) return null;
+    return t.value - prev; // negative = faster
+  });
 
   function fmtTime(v) {
     if (v == null) return '';
@@ -405,112 +402,81 @@ ScorecardView.prototype.renderSosTrendChart = async function() {
     return m + ':' + String(s).padStart(2, '0');
   }
 
+  function fmtDiff(v) {
+    if (v == null) return '';
+    var sign = v <= 0 ? '\u2212' : '+'; // − or +
+    var abs = Math.abs(v);
+    var m = Math.floor(abs / 60); var s = Math.round(abs % 60);
+    if (m === 0) return sign + s + 's';
+    if (s === 0) return sign + m + 'm';
+    return sign + m + 'm ' + s + 's';
+  }
+
   var canvas = document.getElementById(this.ids.sosChart);
   if (!canvas) return;
   var ctx = canvas.getContext('2d');
   if (this._sosChart) this._sosChart.destroy();
 
-  // Plugin: show M:SS labels on the line points
   var sosLabelsPlugin = {
     id: 'sosLabels_' + this.ids.sosChart,
     afterDraw: function(chart) {
       var ctx2 = chart.ctx; ctx2.save();
-      ctx2.font = 'bold 10px sans-serif'; ctx2.textAlign = 'center'; ctx2.textBaseline = 'bottom';
       var meta = chart.getDatasetMeta(0);
       for (var i = 0; i < meta.data.length; i++) {
         var val = chart.data.datasets[0].data[i];
         if (val == null) continue;
-        var label = fmtTime(val);
         var pt = meta.data[i];
-        var textW = ctx2.measureText(label).width;
+
+        // M:SS time label
+        ctx2.font = 'bold 10px sans-serif'; ctx2.textAlign = 'center'; ctx2.textBaseline = 'bottom';
+        var timeLabel = fmtTime(val);
+        var textW = ctx2.measureText(timeLabel).width;
         ctx2.fillStyle = 'rgba(255,255,255,0.85)';
         ctx2.fillRect(pt.x - textW / 2 - 2, pt.y - 18, textW + 4, 14);
         ctx2.fillStyle = '#004F71';
-        ctx2.fillText(label, pt.x, pt.y - 5);
+        ctx2.fillText(timeLabel, pt.x, pt.y - 5);
+
+        // YoY diff label above the time
+        var diff = diffLabels[i];
+        if (diff != null) {
+          var isFaster = diff <= 0;
+          var diffStr = fmtDiff(diff);
+          ctx2.font = 'bold 9px sans-serif'; ctx2.textBaseline = 'bottom';
+          ctx2.fillStyle = isFaster ? '#2e7d32' : '#c62828';
+          ctx2.fillText(diffStr + ' vs PY', pt.x, pt.y - 20);
+        }
       }
       ctx2.restore();
     }
   };
 
-  // Bar colors: green = faster than last year, red = slower
-  var barColors = diffValues.map(function(d) {
-    if (d == null) return '#ccc';
-    return d <= 0 ? '#2e7d32' : '#c62828';
-  });
-
   this._sosChart = new Chart(ctx, {
+    type: 'line',
     data: {
-      labels: months,
+      labels: monthLabels,
       datasets: [
-        {
-          type: 'line',
-          label: 'Speed of Service',
-          data: values,
-          borderColor: '#E51636',
-          backgroundColor: 'rgba(229,22,54,0.08)',
-          borderWidth: 2.5,
-          pointBackgroundColor: '#E51636',
-          pointRadius: 5,
-          pointHoverRadius: 7,
-          fill: true,
-          tension: 0.3,
-          yAxisID: 'y',
-          order: 1
-        },
-        {
-          type: 'bar',
-          label: 'vs A\u00F1o Anterior',
-          data: diffValues,
-          backgroundColor: barColors,
-          borderColor: barColors,
-          borderWidth: 1,
-          borderRadius: 3,
-          barPercentage: 0.6,
-          yAxisID: 'y1',
-          order: 2
-        }
+        { label: 'Speed of Service', data: values, borderColor: '#E51636', backgroundColor: 'rgba(229,22,54,0.1)', borderWidth: 2.5, pointBackgroundColor: '#E51636', pointRadius: 5, pointHoverRadius: 7, fill: true, tension: 0.3 }
       ]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: {
-        legend: { display: true, position: 'top', labels: { font: { size: 10 }, boxWidth: 12 } },
-        tooltip: {
-          callbacks: {
-            label: function(tipCtx) {
-              var v = tipCtx.raw;
-              if (v == null) return '';
-              if (tipCtx.datasetIndex === 0) {
-                return 'SOS: ' + fmtTime(v);
-              }
-              var isFaster = v < 0;
-              return (isFaster ? 'Faster by ' : 'Slower by ') + fmtTime(Math.abs(v)) + ' vs ' + prevYear;
-            }
+        legend: { display: false },
+        tooltip: { callbacks: {
+          label: function(tipCtx) { var v = tipCtx.raw; if (v == null) return ''; return 'SOS: ' + fmtTime(v); },
+          afterLabel: function(tipCtx) {
+            var diff = diffLabels[tipCtx.dataIndex];
+            if (diff == null) return '';
+            var isFaster = diff <= 0;
+            return (isFaster ? 'Faster' : 'Slower') + ' by ' + fmtTime(Math.abs(diff)) + ' vs ' + prevYear;
           }
-        }
+        }}
       },
       scales: {
-        y: {
-          position: 'left',
-          title: { display: true, text: 'Tiempo (M:SS)', font: { size: 11 } },
-          ticks: { callback: function(v) { return fmtTime(v); }, font: { size: 10 } },
-          grid: { color: 'rgba(0,0,0,0.06)' }
-        },
-        y1: {
-          position: 'right',
-          title: { display: true, text: 'vs ' + prevYear + ' (seg)', font: { size: 10 } },
-          ticks: {
-            callback: function(v) {
-              var sign = v <= 0 ? '' : '+';
-              return sign + Math.round(v) + 's';
-            },
-            font: { size: 9 }
-          },
-          grid: { display: false }
-        },
-        x: { ticks: { font: { size: 10 } }, grid: { display: false } }
+        y: { title: { display: true, text: 'Time (M:SS)', font: { size: 11 } }, ticks: { callback: function(v) { return fmtTime(v); } }, grid: { color: 'rgba(0,0,0,0.06)' } },
+        x: { ticks: { font: { size: 10 } } }
       },
-      layout: { padding: { top: 20 } }
+      layout: { padding: { top: 30 } }
     },
     plugins: [sosLabelsPlugin]
   });
