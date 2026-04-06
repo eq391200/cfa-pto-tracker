@@ -228,25 +228,8 @@ async function runAutoCollect(targetMonth) {
     console.log(`  Google Reviews: FAILED - ${google.error}`);
   }
 
-  // 2. Facebook Followers
-  const facebook = await fetchFacebookFollowers();
-  if (facebook.success) {
-    collected.facebook_followers = facebook.followers;
-    console.log(`  Facebook Followers: ${facebook.followers}`);
-  } else {
-    failed.facebook_followers = facebook.error;
-    console.log(`  Facebook Followers: FAILED - ${facebook.error}`);
-  }
-
-  // 3. Instagram Followers
-  const instagram = await fetchInstagramFollowers();
-  if (instagram.success) {
-    collected.instagram_followers = instagram.followers;
-    console.log(`  Instagram Followers: ${instagram.followers}`);
-  } else {
-    failed.instagram_followers = instagram.error;
-    console.log(`  Instagram Followers: FAILED - ${instagram.error}`);
-  }
+  // Facebook & Instagram require Meta API credentials (manual entry until configured)
+  // See Meta_API_Setup_Guide.docx for setup instructions
 
   // Save collected metrics to database
   let saved = 0;

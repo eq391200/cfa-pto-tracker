@@ -3668,8 +3668,8 @@ async function scAutoCollect() {
       return;
     }
 
-    const labels = { google_reviews: 'Google Reviews', facebook_followers: 'Facebook Followers', instagram_followers: 'Instagram Followers' };
-    const icons = { google_reviews: '⭐', facebook_followers: '👥', instagram_followers: '📸' };
+    const labels = { google_reviews: 'Google Reviews' };
+    const icons = { google_reviews: '⭐' };
     const collectedCount = Object.keys(data.collected).length;
     const failedCount = Object.keys(data.failed).length;
 
@@ -3708,12 +3708,10 @@ async function scAutoCollect() {
       html += '</div>';
     }
 
-    // Setup tips if nothing was collected
-    if (collectedCount === 0) {
+    // Setup tip if Google Reviews failed
+    if (collectedCount === 0 && data.failed.google_reviews) {
       html += '<div style="padding:10px 12px;background:#e3f2fd;border-radius:5px;font-size:13px;color:#1565c0;">';
-      html += '<strong>💡 Configuración:</strong><br>';
-      html += '• <strong>Google Reviews:</strong> Requiere <code>GOOGLE_PLACES_API_KEY</code> en el archivo .env del servidor (<a href="https://console.cloud.google.com/apis/credentials" target="_blank" style="color:#1565c0;">Google Cloud Console</a>)<br>';
-      html += '• <strong>Facebook / Instagram:</strong> Estas plataformas bloquean scraping — ingresar manualmente en la tabla';
+      html += '<strong>💡</strong> Google Reviews requiere <code>GOOGLE_PLACES_API_KEY</code> en .env';
       html += '</div>';
     }
 
