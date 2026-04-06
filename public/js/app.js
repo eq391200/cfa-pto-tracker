@@ -3668,8 +3668,8 @@ async function scAutoCollect() {
       return;
     }
 
-    const labels = { google_reviews: 'Google Reviews' };
-    const icons = { google_reviews: '⭐' };
+    var labels = { google_reviews: 'Google Reviews', facebook_followers: 'Facebook Followers', instagram_followers: 'Instagram Followers' };
+    var icons = { google_reviews: '&#11088;', facebook_followers: '&#128101;', instagram_followers: '&#128248;' };
     const collectedCount = Object.keys(data.collected).length;
     const failedCount = Object.keys(data.failed).length;
 
