@@ -92,10 +92,16 @@ ScorecardView.prototype.load = async function() {
   }
 };
 
+/** Convert pct value: if already > 1 (e.g. 95) treat as whole %; if <= 1 (e.g. 0.95) multiply by 100 */
+ScorecardView.prototype.pctVal = function(value) {
+  if (value === null || value === undefined) return null;
+  return Math.abs(value) > 1 ? value : value * 100;
+};
+
 ScorecardView.prototype.formatValue = function(key, value) {
   if (value === null || value === undefined) return '<span style="color:var(--text-light);">\u2014</span>';
   var cfg = this.config;
-  if (cfg.pctMetrics.includes(key)) return (value * 100).toFixed(1) + '%';
+  if (cfg.pctMetrics.includes(key)) return this.pctVal(value).toFixed(1) + '%';
   if (cfg.currencyMetrics.includes(key)) {
     if (Math.abs(value) >= 1000) return '$' + value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
     return '$' + value.toFixed(2);
@@ -158,12 +164,14 @@ ScorecardView.prototype.buildCard = function(key, current, prevYoY, prevMonth, e
     html += '<div style="margin-top:0.15rem; font-size:0.75rem; color:' + addColor + '; font-weight:600;">' + addSign + added.toLocaleString('en-US') + ' este mes</div>';
   }
   if (key === 'osat_overall' && current.osat_market != null && val != null) {
-    var mktDelta = (val - current.osat_market) * 100;
+    var mktNorm = Math.abs(current.osat_market) > 1 ? current.osat_market : current.osat_market * 100;
+    var valNorm = Math.abs(val) > 1 ? val : val * 100;
+    var mktDelta = valNorm - mktNorm;
     var mktColor = mktDelta >= 0 ? 'var(--brand-green)' : 'var(--brand-red)';
     var mktArrow = mktDelta >= 0 ? '&#9650;' : '&#9660;';
     html += '<div style="margin-top:0.25rem;">';
     html += '<span style="font-size:0.75rem; color:' + mktColor + '; font-weight:600;">' + mktArrow + ' ' + Math.abs(mktDelta).toFixed(1) + ' pp</span>';
-    html += ' <span style="font-size:0.65rem; color:var(--text-light);">vs mercado (' + (current.osat_market * 100).toFixed(0) + '%)</span>';
+    html += ' <span style="font-size:0.65rem; color:var(--text-light);">vs mercado (' + mktNorm.toFixed(0) + '%)</span>';
     html += '</div>';
   }
   html += '</div>';
@@ -460,7 +468,7 @@ ScorecardView.prototype.renderOsatTrendChart = async function() {
   for (var m = 0; m < monthKeys.length; m++) {
     var mk = monthKeys[m];
     var monthIdx = parseInt(mk.split('-')[1]) - 1;
-    var data = SC_WEEKDAYS.map(function(d) { var val = monthMap[mk][d]; return val != null ? Math.round(val * 100) : null; });
+    var data = SC_WEEKDAYS.map(function(d) { var val = monthMap[mk][d]; return val != null ? Math.round(Math.abs(val) > 1 ? val : val * 100) : null; });
     datasets.push({
       label: SC_MONTH_NAMES[monthIdx], data: data,
       backgroundColor: SC_MONTH_COLORS[monthIdx],
@@ -705,7 +713,8 @@ async function scShowMetricDrilldown(metricKey, pickerId) {
 
   function fmtVal(key, value) {
     if (value == null) return '\u2014';
-    if (cfg.pctMetrics.includes(key)) return (value * 100).toFixed(1) + '%';
+    var pv = function(v) { return Math.abs(v) > 1 ? v : v * 100; };
+    if (cfg.pctMetrics.includes(key)) return pv(value).toFixed(1) + '%';
     if (cfg.currencyMetrics.includes(key)) {
       if (Math.abs(value) >= 1000) return '$' + value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
       return '$' + value.toFixed(2);
@@ -762,7 +771,7 @@ async function scShowMetricDrilldown(metricKey, pickerId) {
 
   var chartValues = values.map(function(v) {
     if (v == null) return null;
-    return isPct ? v * 100 : v;
+    return isPct ? (Math.abs(v) > 1 ? v : v * 100) : v;
   });
 
   var drilldownLabelsPlugin = {

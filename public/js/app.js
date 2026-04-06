@@ -3480,7 +3480,7 @@ function showSCDataEntry() {
         var key = metrics[m];
         var label = cfg.labels[key] || key;
         var hint = '';
-        if (cfg.pctMetrics.includes(key)) hint = ' (decimal, ej: 0.92)';
+        if (cfg.pctMetrics.includes(key)) hint = ' (ej: 92 o 0.92)';
         if (cfg.currencyMetrics.includes(key)) hint = ' ($)';
         if (key === 'speed_of_service') hint = ' (M:SS, ej: 4:41)';
         var inputType = key === 'speed_of_service' ? 'text' : 'number';
@@ -3497,7 +3497,7 @@ function showSCDataEntry() {
     var weekdays = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
     for (var w = 0; w < weekdays.length; w++) {
       html += '<div class="form-group" style="margin:0;">';
-      html += '<label style="font-size:0.8rem;">' + weekdays[w] + ' <span style="color:var(--text-light); font-size:0.7rem;">(decimal, ej: 0.85)</span></label>';
+      html += '<label style="font-size:0.8rem;">' + weekdays[w] + ' <span style="color:var(--text-light); font-size:0.7rem;">(ej: 85 o 0.85)</span></label>';
       html += '<input type="number" step="any" id="sc_weekday_' + w + '" style="font-size:0.875rem;" placeholder="—">';
       html += '</div>';
     }
