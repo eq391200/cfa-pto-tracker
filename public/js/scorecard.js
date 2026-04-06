@@ -11,7 +11,7 @@ var SC_ICONS = {
   osat_accuracy: '\uD83C\uDFAF',
   osat_taste: '\uD83D\uDE0B',
   google_reviews: '<img src="https://www.google.com/favicon.ico" style="width:16px;height:16px;vertical-align:middle;" alt="G">',
-  uber_rating: '<img src="https://d3i4yxtzktqr9n.cloudfront.net/web-eats-v2/ee037401cb5d31b23cf780808ee4ec1f.svg" style="width:16px;height:16px;vertical-align:middle;" alt="UE">',
+  uber_rating: '<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5b/Uber_Eats_2020_logo.svg/120px-Uber_Eats_2020_logo.svg.png" style="width:20px;height:20px;vertical-align:middle;" alt="UE">',
   sales_total: '\uD83D\uDCB0',
   sales_drive_thru: '\uD83D\uDE97',
   sales_dine_in: '\uD83C\uDF7D\uFE0F',
