@@ -3669,7 +3669,7 @@ async function scAutoCollect() {
     }
 
     var labels = { google_reviews: 'Google Reviews', facebook_followers: 'Facebook Followers', instagram_followers: 'Instagram Followers' };
-    var icons = { google_reviews: '\u2605', facebook_followers: 'FB', instagram_followers: 'IG' };
+    var icons = { google_reviews: '⭐', facebook_followers: '👥', instagram_followers: '📸' };
     const collectedCount = Object.keys(data.collected).length;
     const failedCount = Object.keys(data.failed).length;
 
