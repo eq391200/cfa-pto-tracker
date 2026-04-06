@@ -541,7 +541,9 @@ ScorecardView.prototype.renderOsatTrendChart = async function() {
     monthMap[r.month][r.weekday] = r.osat_value;
   }
 
-  var monthKeys = Object.keys(monthMap).sort();
+  var allMonthKeys = Object.keys(monthMap).sort();
+  // Only show current month and prior month
+  var monthKeys = allMonthKeys.slice(-2);
   var datasets = [];
   for (var m = 0; m < monthKeys.length; m++) {
     var mk = monthKeys[m];
