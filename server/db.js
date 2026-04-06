@@ -143,6 +143,8 @@ function initDb() {
  */
 function runMigrations(db) {
   const hasColumn = (table, column) => {
+    // Validate table name to prevent SQL injection (PRAGMA can't use parameters)
+    if (!/^[a-z_]+$/i.test(table)) throw new Error('Invalid table name: ' + table);
     const cols = db.prepare(`PRAGMA table_info(${table})`).all();
     return cols.some(c => c.name === column);
   };
@@ -1679,6 +1681,57 @@ function runMigrations(db) {
       )
     `);
   } catch (e) { console.log('v1.25 wage tracking migration note:', e.message); }
+
+  // v1.26 — Performance indexes for core queries
+  try {
+    db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_time_off_taken_emp_type ON time_off_taken(employee_id, type);
+      CREATE INDEX IF NOT EXISTS idx_accruals_employee ON accruals(employee_id);
+      CREATE INDEX IF NOT EXISTS idx_monthly_hours_emp_year ON monthly_hours(employee_id, year, month);
+      CREATE INDEX IF NOT EXISTS idx_employees_status ON employees(status);
+      CREATE INDEX IF NOT EXISTS idx_scorecard_entries_month ON scorecard_entries(month);
+      CREATE INDEX IF NOT EXISTS idx_gastos_invoices_status ON gastos_invoices(status);
+      CREATE INDEX IF NOT EXISTS idx_gastos_invoices_period ON gastos_invoices(business_period_start);
+      CREATE INDEX IF NOT EXISTS idx_users_employee_id ON users(employee_id);
+    `);
+  } catch (e) { console.log('v1.26 index migration note:', e.message); }
+
+  // v1.27 — Audit log table for tracking all write operations
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS audit_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        username TEXT,
+        action TEXT NOT NULL,
+        resource TEXT NOT NULL,
+        resource_id TEXT,
+        details TEXT,
+        ip_address TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_audit_log_created ON audit_log(created_at);
+      CREATE INDEX IF NOT EXISTS idx_audit_log_user ON audit_log(user_id);
+      CREATE INDEX IF NOT EXISTS idx_audit_log_resource ON audit_log(resource, resource_id);
+    `);
+  } catch (e) { console.log('v1.27 audit log migration note:', e.message); }
 }
 
-module.exports = { getDb, initDb };
+/**
+ * Log an action to the audit trail.
+ * @param {Object} opts - { userId, username, action, resource, resourceId, details, ip }
+ */
+function auditLog({ userId, username, action, resource, resourceId, details, ip }) {
+  try {
+    const db = getDb();
+    db.prepare(`
+      INSERT INTO audit_log (user_id, username, action, resource, resource_id, details, ip_address)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(userId || null, username || null, action, resource, resourceId || null,
+           typeof details === 'object' ? JSON.stringify(details) : (details || null), ip || null);
+  } catch (e) {
+    console.warn('[Audit] Failed to log:', e.message);
+  }
+}
+
+module.exports = { getDb, initDb, auditLog };

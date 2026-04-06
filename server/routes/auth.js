@@ -11,11 +11,11 @@
 
 const express = require('express');
 const bcrypt = require('bcrypt');
-const { getDb } = require('../db');
+const { getDb, auditLog } = require('../db');
 
 const router = express.Router();
-const BCRYPT_ROUNDS = 10;
-const MIN_PASSWORD_LENGTH = 6;
+const BCRYPT_ROUNDS = 12;
+const MIN_PASSWORD_LENGTH = 8;
 
 // ── POST /api/auth/login — Authenticate user ────────────────────────
 router.post('/login', async (req, res) => {
@@ -30,13 +30,18 @@ router.post('/login', async (req, res) => {
     if (!user) return res.status(401).json({ error: 'Invalid credentials' });
 
     const valid = await bcrypt.compare(password, user.password_hash);
-    if (!valid) return res.status(401).json({ error: 'Invalid credentials' });
+    if (!valid) {
+      auditLog({ username, action: 'login_failed', resource: 'auth', ip: req.ip });
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
 
     // Establish session
     req.session.userId = user.id;
     req.session.username = user.username;
     req.session.role = user.role;
     req.session.employeeId = user.employee_id;
+
+    auditLog({ userId: user.id, username: user.username, action: 'login_success', resource: 'auth', ip: req.ip });
 
     const response = { success: true, role: user.role, username: user.username };
     if (user.must_change_password) response.mustChangePassword = true;

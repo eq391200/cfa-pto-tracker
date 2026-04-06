@@ -192,8 +192,8 @@ router.post('/run', reconciliationUpload, async (req, res) => {
       }
     });
   } catch (err) {
-    console.error('Reconciliation failed:', err.message);
-    res.status(500).json({ error: 'Reconciliation failed: ' + err.message });
+    console.error('Reconciliation failed:', err.message, err.stack);
+    res.status(500).json({ error: 'Reconciliation failed. Please try again or contact support.' });
   } finally {
     cleanupDir(workDir);
   }
@@ -245,7 +245,10 @@ router.get('/report/:id/view', (req, res) => {
 
     if (!report) return res.status(404).json({ error: 'Report not found' });
 
-    const filePath = path.join(reportsDir, report.output_file);
+    const filePath = path.resolve(reportsDir, path.basename(report.output_file));
+    if (!filePath.startsWith(path.resolve(reportsDir))) {
+      return res.status(400).json({ error: 'Invalid file path' });
+    }
     if (!fs.existsSync(filePath)) {
       return res.status(404).json({ error: 'Report file not found on disk' });
     }
@@ -253,7 +256,8 @@ router.get('/report/:id/view', (req, res) => {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.sendFile(filePath);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Report view error:', err);
+    res.status(500).json({ error: 'Failed to load report' });
   }
 });
 
@@ -267,8 +271,10 @@ router.delete('/report/:id', (req, res) => {
 
     if (!report) return res.status(404).json({ error: 'Report not found' });
 
-    const filePath = path.join(reportsDir, report.output_file);
-    try { fs.unlinkSync(filePath); } catch (_) {}
+    const filePath = path.resolve(reportsDir, path.basename(report.output_file));
+    if (filePath.startsWith(path.resolve(reportsDir))) {
+      try { fs.unlinkSync(filePath); } catch (_) {}
+    }
 
     db.prepare('DELETE FROM reconciliation_reports WHERE id = ?').run(req.params.id);
     res.json({ success: true });

@@ -214,8 +214,21 @@ function validateBookmarkletToken(req) {
  * Set CORS headers for cross-origin bookmarklet requests.
  * @param {Object} res - Express response
  */
-function setCorsHeaders(res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+/** Allowed origins for bookmarklet CORS — restrict to known domains */
+const BOOKMARKLET_ORIGINS = [
+  'https://www.cfahome.com',
+  'https://cfahome.com',
+  'https://apex.cfahome.com'
+];
+
+function setCorsHeaders(res, req) {
+  const origin = req && req.headers.origin;
+  if (origin && BOOKMARKLET_ORIGINS.some(o => origin.startsWith(o))) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  } else {
+    // Fallback for development or unknown origins
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 }
@@ -679,13 +692,13 @@ Return ONLY this JSON (no extra text):
     let pageImages = [];
 
     if (mediaType === 'application/pdf') {
-      const { execSync } = require('child_process');
+      const { execFileSync } = require('child_process');
       const tmpDir = path.join(UPLOAD_DIR, 'tmp-' + Date.now());
       fs.mkdirSync(tmpDir, { recursive: true });
 
       try {
-        // Convert each PDF page to a JPEG image
-        execSync(`pdftoppm -jpeg -r 200 "${req.file.path}" "${path.join(tmpDir, 'page')}"`, { timeout: 30000 });
+        // Convert each PDF page to a JPEG image (execFileSync avoids shell injection)
+        execFileSync('pdftoppm', ['-jpeg', '-r', '200', req.file.path, path.join(tmpDir, 'page')], { timeout: 30000 });
         const pageFiles = fs.readdirSync(tmpDir).filter(f => f.endsWith('.jpg')).sort();
         for (const pf of pageFiles) {
           const imgBuf = fs.readFileSync(path.join(tmpDir, pf));
