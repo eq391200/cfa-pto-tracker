@@ -349,42 +349,61 @@ ScorecardView.prototype.render = function() {
   this.renderSosTrendChart();
 };
 
-// ── SOS Trend Chart ──────────────────────────────────────────────────
+// ── SOS Year-over-Year Chart ────────────────────────────────────────
 ScorecardView.prototype.renderSosTrendChart = async function() {
   var picker = document.getElementById(this.ids.monthPicker);
   var refMonth = picker ? picker.value : null;
   if (!refMonth) return;
 
-  var sosTrend;
+  var year = parseInt(refMonth.split('-')[0]);
+  var prevYear = year - 1;
+
+  // Fetch current year and prior year data
+  var curTrend, prevTrend;
   try {
-    var sosRes = await fetch('/api/scorecard/data?period=year&month=' + refMonth);
-    var sosData = await sosRes.json();
-    sosTrend = sosData.trend && sosData.trend.speed_of_service;
+    var curRes = await fetch('/api/scorecard/data?period=year&month=' + refMonth);
+    var curData = await curRes.json();
+    curTrend = curData.trend && curData.trend.speed_of_service;
+
+    var prevRefMonth = prevYear + refMonth.slice(4);
+    var prevRes = await fetch('/api/scorecard/data?period=year&month=' + prevRefMonth);
+    var prevData = await prevRes.json();
+    prevTrend = prevData.trend && prevData.trend.speed_of_service;
   } catch(e) { return; }
-  if (!sosTrend || !sosTrend.length) return;
 
-  var last12 = sosTrend.slice(-12);
-  var values = last12.map(function(t) { return t.value != null ? t.value : null; });
-  var monthLabels = last12.map(function(t) {
-    var parts = t.month.split('-');
-    return SC_MONTH_NAMES[parseInt(parts[1]) - 1] + ' ' + parts[0].slice(2);
-  });
+  if (!curTrend || !curTrend.length) return;
 
-  // Linear trend line
-  var validPts = [];
-  for (var ti = 0; ti < values.length; ti++) {
-    if (values[ti] != null) validPts.push({ x: ti, y: values[ti] });
+  // Build month-keyed maps
+  var curMap = {}, prevMap = {};
+  for (var i = 0; i < curTrend.length; i++) {
+    var mm = curTrend[i].month.split('-')[1];
+    curMap[mm] = curTrend[i].value;
   }
-  var trendLine = values.map(function() { return null; });
-  if (validPts.length >= 2) {
-    var n = validPts.length, sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
-    for (var j = 0; j < n; j++) {
-      sumX += validPts[j].x; sumY += validPts[j].y;
-      sumXY += validPts[j].x * validPts[j].y; sumX2 += validPts[j].x * validPts[j].x;
+  if (prevTrend) {
+    for (var j = 0; j < prevTrend.length; j++) {
+      var mm2 = prevTrend[j].month.split('-')[1];
+      prevMap[mm2] = prevTrend[j].value;
     }
-    var slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
-    var intercept = (sumY - slope * sumX) / n;
-    trendLine = values.map(function(_, idx) { return Math.round(slope * idx + intercept); });
+  }
+
+  // Build arrays aligned by month (Jan-Dec or up to current month)
+  var months = [];
+  var curValues = [], prevValues = [], diffValues = [];
+  var endMM = parseInt(refMonth.split('-')[1]);
+  for (var m = 1; m <= endMM; m++) {
+    var key = String(m).padStart(2, '0');
+    months.push(SC_MONTH_NAMES[m - 1]);
+    var cur = curMap[key] != null ? curMap[key] : null;
+    var prev = prevMap[key] != null ? prevMap[key] : null;
+    curValues.push(cur);
+    prevValues.push(prev);
+    diffValues.push((cur != null && prev != null) ? cur - prev : null);
+  }
+
+  function fmtTime(v) {
+    if (v == null) return '';
+    var m = Math.floor(Math.abs(v) / 60); var s = Math.round(Math.abs(v) % 60);
+    return (v < 0 ? '-' : '') + m + ':' + String(s).padStart(2, '0');
   }
 
   var canvas = document.getElementById(this.ids.sosChart);
@@ -392,49 +411,117 @@ ScorecardView.prototype.renderSosTrendChart = async function() {
   var ctx = canvas.getContext('2d');
   if (this._sosChart) this._sosChart.destroy();
 
-  var sosLabelsPlugin = {
-    id: 'sosLabels_' + this.ids.sosChart,
+  // Plugin: show time labels on bars + YoY diff above
+  var sosYoyPlugin = {
+    id: 'sosYoy_' + this.ids.sosChart,
     afterDraw: function(chart) {
       var ctx2 = chart.ctx; ctx2.save();
-      ctx2.font = 'bold 10px sans-serif'; ctx2.textAlign = 'center'; ctx2.textBaseline = 'bottom';
-      var meta = chart.getDatasetMeta(0);
-      for (var i = 0; i < meta.data.length; i++) {
-        var val = chart.data.datasets[0].data[i];
-        if (val == null) continue;
-        var mins = Math.floor(val / 60); var secs = Math.round(val % 60);
-        var label = mins + ':' + String(secs).padStart(2, '0');
-        var pt = meta.data[i];
-        var textW = ctx2.measureText(label).width;
-        ctx2.fillStyle = 'rgba(255,255,255,0.85)';
-        ctx2.fillRect(pt.x - textW / 2 - 2, pt.y - 18, textW + 4, 14);
-        ctx2.fillStyle = '#004F71';
-        ctx2.fillText(label, pt.x, pt.y - 5);
+      var metaCur = chart.getDatasetMeta(0);
+      var metaPrev = chart.getDatasetMeta(1);
+
+      // Time labels on bars
+      ctx2.font = 'bold 9px sans-serif'; ctx2.textAlign = 'center';
+      for (var i = 0; i < metaCur.data.length; i++) {
+        var cVal = chart.data.datasets[0].data[i];
+        if (cVal != null) {
+          var pt = metaCur.data[i];
+          ctx2.fillStyle = '#fff';
+          ctx2.textBaseline = 'top';
+          ctx2.fillText(fmtTime(cVal), pt.x, pt.y + 3);
+        }
+        var pVal = chart.data.datasets[1].data[i];
+        if (pVal != null) {
+          var pt2 = metaPrev.data[i];
+          ctx2.fillStyle = '#fff';
+          ctx2.textBaseline = 'top';
+          ctx2.fillText(fmtTime(pVal), pt2.x, pt2.y + 3);
+        }
+      }
+
+      // YoY diff labels above
+      ctx2.font = 'bold 10px sans-serif'; ctx2.textBaseline = 'bottom';
+      for (var k = 0; k < metaCur.data.length; k++) {
+        var diff = diffValues[k];
+        if (diff == null) continue;
+        var ptC = metaCur.data[k];
+        var ptP = metaPrev.data[k];
+        var topY = Math.min(ptC.y, ptP.y) - 6;
+        var centerX = (ptC.x + ptP.x) / 2;
+        var isFaster = diff < 0;
+        var diffSecs = Math.abs(diff);
+        var dm = Math.floor(diffSecs / 60); var ds = Math.round(diffSecs % 60);
+        var diffLabel = (isFaster ? '-' : '+') + dm + ':' + String(ds).padStart(2, '0');
+        ctx2.fillStyle = isFaster ? '#2e7d32' : '#c62828';
+        ctx2.fillText(diffLabel, centerX, topY);
       }
       ctx2.restore();
     }
   };
 
   this._sosChart = new Chart(ctx, {
-    type: 'line',
+    type: 'bar',
     data: {
-      labels: monthLabels,
+      labels: months,
       datasets: [
-        { label: 'Speed of Service', data: values, borderColor: '#E51636', backgroundColor: 'rgba(229,22,54,0.1)', borderWidth: 2.5, pointBackgroundColor: '#E51636', pointRadius: 5, pointHoverRadius: 7, fill: true, tension: 0.3 },
-        { label: 'Trend', data: trendLine, borderColor: '#004F71', borderWidth: 2, borderDash: [6, 4], pointRadius: 0, pointHoverRadius: 0, fill: false, tension: 0 }
+        {
+          label: year + ' (Este A\u00F1o)',
+          data: curValues,
+          backgroundColor: '#E51636',
+          borderColor: '#E51636',
+          borderWidth: 1,
+          borderRadius: 4,
+          barPercentage: 0.8,
+          categoryPercentage: 0.7
+        },
+        {
+          label: prevYear + ' (A\u00F1o Anterior)',
+          data: prevValues,
+          backgroundColor: '#004F71',
+          borderColor: '#004F71',
+          borderWidth: 1,
+          borderRadius: 4,
+          barPercentage: 0.8,
+          categoryPercentage: 0.7
+        }
       ]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: {
         legend: { display: true, position: 'top', labels: { font: { size: 10 }, boxWidth: 12 } },
-        tooltip: { callbacks: { label: function(tipCtx) { var v = tipCtx.raw; if (v == null) return ''; var m = Math.floor(v / 60); var s = Math.round(v % 60); return tipCtx.dataset.label + ': ' + m + ':' + String(s).padStart(2, '0'); } } }
+        tooltip: {
+          callbacks: {
+            label: function(tipCtx) {
+              var v = tipCtx.raw;
+              if (v == null) return '';
+              return tipCtx.dataset.label + ': ' + fmtTime(v);
+            },
+            afterBody: function(tooltipItems) {
+              var idx = tooltipItems[0].dataIndex;
+              var diff = diffValues[idx];
+              if (diff == null) return '';
+              var isFaster = diff < 0;
+              var absDiff = Math.abs(diff);
+              var dm = Math.floor(absDiff / 60); var ds = Math.round(absDiff % 60);
+              return (isFaster ? '\u2705 ' : '\u26A0\uFE0F ') + (isFaster ? 'Faster' : 'Slower') + ' by ' + dm + ':' + String(ds).padStart(2, '0');
+            }
+          }
+        }
       },
       scales: {
-        y: { reverse: false, title: { display: true, text: 'Time (M:SS)', font: { size: 11 } }, ticks: { callback: function(v) { var m = Math.floor(v / 60); var s = Math.round(v % 60); return m + ':' + String(s).padStart(2, '0'); } } },
-        x: { ticks: { font: { size: 10 } } }
-      }
+        y: {
+          title: { display: true, text: 'Tiempo (M:SS)', font: { size: 11 } },
+          ticks: {
+            callback: function(v) { return fmtTime(v); },
+            font: { size: 10 }
+          },
+          grid: { color: 'rgba(0,0,0,0.06)' }
+        },
+        x: { ticks: { font: { size: 10 } }, grid: { display: false } }
+      },
+      layout: { padding: { top: 25 } }
     },
-    plugins: [sosLabelsPlugin]
+    plugins: [sosYoyPlugin]
   });
 };
 
