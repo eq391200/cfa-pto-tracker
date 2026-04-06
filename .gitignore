@@ -1,6 +1,6 @@
 node_modules/
-data/*.db
-data/sessions.db
+data/
+
 .env
 uploads/
 data/backups/
