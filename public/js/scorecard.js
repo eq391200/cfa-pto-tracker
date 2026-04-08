@@ -18,6 +18,10 @@ var SC_ICONS = {
   sales_carry_out: '\uD83E\uDD61',
   sales_catering: '\uD83C\uDF89',
   sales_third_party: '\uD83D\uDCF1',
+  sales_breakfast: '\uD83C\uDF05',
+  sales_lunch: '\u2600\uFE0F',
+  sales_afternoon: '\uD83C\uDF24\uFE0F',
+  sales_dinner: '\uD83C\uDF19',
   growth_sales: '\uD83D\uDCC8',
   avg_check: '\uD83E\uDDFE',
   avg_transactions: '\uD83D\uDD22',
@@ -210,15 +214,19 @@ ScorecardView.prototype.renderSection = function(sectionKey, metrics, current, p
     return;
   }
 
-  // Section 2: Sales Growth — channels grouped + SSS% card
+  // Section 2: Sales Growth — channels + dayparts grouped + SSS%
   if (sectionKey === '2') {
     var salesChannels = ['sales_drive_thru', 'sales_dine_in', 'sales_carry_out', 'sales_catering', 'sales_third_party'];
-    var otherSales = metrics.filter(function(k) { return k !== 'sales_total' && salesChannels.indexOf(k) === -1; });
+    var salesDayparts = ['sales_breakfast', 'sales_lunch', 'sales_afternoon', 'sales_dinner'];
+    var otherSales = metrics.filter(function(k) {
+      return k !== 'sales_total' && salesChannels.indexOf(k) === -1 && salesDayparts.indexOf(k) === -1;
+    });
     var html = '';
     var salesSlot = document.getElementById(self.ids.salesSlot);
     if (salesSlot) {
       salesSlot.innerHTML = self.buildCard('sales_total', current, prevYoY, prevMonth, 'border-left:4px solid var(--brand-red); flex:1; display:flex; flex-direction:column; justify-content:center; min-height:100%;');
     }
+    // Sales by Channel
     html += '<div style="margin-bottom:1.25rem; padding:1rem; background:var(--bg-alt, #f8f9fa); border-radius:var(--radius-lg, 12px); border:1px solid var(--border, #e0e0e0);">';
     html += '<div style="font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--brand-navy); margin-bottom:0.75rem;">Ventas por Canal</div>';
     html += '<div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:0.75rem;">';
@@ -226,6 +234,35 @@ ScorecardView.prototype.renderSection = function(sectionKey, metrics, current, p
       html += self.buildCard(salesChannels[i], current, prevYoY, prevMonth, 'background:white; border-left:3px solid var(--brand-blue);');
     }
     html += '</div></div>';
+    // Sales by Daypart
+    var hasDaypartData = salesDayparts.some(function(k) { return current[k] != null; });
+    if (hasDaypartData) {
+      html += '<div style="margin-bottom:1.25rem; padding:1rem; background:var(--bg-alt, #f8f9fa); border-radius:var(--radius-lg, 12px); border:1px solid var(--border, #e0e0e0);">';
+      html += '<div style="font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--brand-navy); margin-bottom:0.75rem;">Ventas por Daypart</div>';
+      html += '<div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:0.75rem;">';
+      // Calculate daypart mix % for each
+      var daypartTotal = 0;
+      for (var d = 0; d < salesDayparts.length; d++) {
+        if (current[salesDayparts[d]] != null) daypartTotal += current[salesDayparts[d]];
+      }
+      for (var d = 0; d < salesDayparts.length; d++) {
+        var dpKey = salesDayparts[d];
+        var dpVal = current[dpKey];
+        var mixPct = (dpVal != null && daypartTotal > 0) ? ((dpVal / daypartTotal) * 100).toFixed(1) : null;
+        var cardHtml = self.buildCard(dpKey, current, prevYoY, prevMonth, 'background:white; border-left:3px solid var(--brand-red);');
+        // Inject mix % into card
+        if (mixPct !== null) {
+          cardHtml = cardHtml.replace('</div><!--endcard-->', '');
+          // Add mix % before closing div
+          var closeIdx = cardHtml.lastIndexOf('</div>');
+          cardHtml = cardHtml.substring(0, closeIdx) +
+            '<div style="margin-top:0.25rem; font-size:0.7rem; color:var(--text-light); font-weight:600;">' + mixPct + '% del total</div>' +
+            cardHtml.substring(closeIdx);
+        }
+        html += cardHtml;
+      }
+      html += '</div></div>';
+    }
     html += '<div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">';
     html += self.buildCard('growth_sales', current, prevYoY, prevMonth, '');
     for (var j = 0; j < otherSales.length; j++) {

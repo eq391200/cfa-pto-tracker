@@ -22,6 +22,7 @@ const METRIC_SECTIONS = {
   sales_growth: [
     'sales_total', 'sales_drive_thru', 'sales_dine_in', 'sales_carry_out',
     'sales_catering', 'sales_third_party',
+    'sales_breakfast', 'sales_lunch', 'sales_afternoon', 'sales_dinner',
     'avg_check', 'avg_transactions'
   ],
   quality_brand: [
@@ -54,6 +55,10 @@ const METRIC_LABELS = {
   sales_carry_out: 'Carry Out',
   sales_catering: 'Catering',
   sales_third_party: '3rd Party (Uber/DoorDash)',
+  sales_breakfast: 'Desayuno',
+  sales_lunch: 'Almuerzo',
+  sales_afternoon: 'Tarde',
+  sales_dinner: 'Cena',
   growth_sales: 'Same Store Sales (SSS%)',
   avg_check: 'Ticket Promedio',
   avg_transactions: 'Transacciones Promedio',
@@ -76,7 +81,8 @@ const PCT_METRICS = ['osat_overall', 'osat_speed', 'osat_attentive', 'osat_clean
 
 // Which metrics are currency
 const CURRENCY_METRICS = ['sales_total', 'sales_drive_thru', 'sales_dine_in', 'sales_carry_out',
-  'sales_catering', 'sales_third_party', 'avg_check', 'productivity'];
+  'sales_catering', 'sales_third_party', 'sales_breakfast', 'sales_lunch', 'sales_afternoon',
+  'sales_dinner', 'avg_check', 'productivity'];
 
 // Which metrics use average (vs sum) when aggregating across months
 const AVG_METRICS = ['osat_overall', 'osat_speed', 'osat_attentive', 'osat_cleanliness',
