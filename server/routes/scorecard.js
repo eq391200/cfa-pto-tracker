@@ -34,7 +34,7 @@ const METRIC_SECTIONS = {
 };
 
 // Reference metrics (not displayed as their own card, used for comparisons)
-const REFERENCE_METRICS = ['osat_market'];
+const REFERENCE_METRICS = ['osat_market', 'google_review_count'];
 
 const ALL_METRICS = Object.values(METRIC_SECTIONS).flat().concat(REFERENCE_METRICS);
 
@@ -86,7 +86,7 @@ const AVG_METRICS = ['osat_overall', 'osat_speed', 'osat_attentive', 'osat_clean
   'productivity', 'osat_market'];
 
 // Metrics that use the latest value (snapshot, not sum/avg)
-const LATEST_METRICS = ['instagram_followers', 'facebook_followers'];
+const LATEST_METRICS = ['instagram_followers', 'facebook_followers', 'google_review_count'];
 
 
 // ── GET /api/scorecard/config — Return metric definitions ───────────
@@ -482,6 +482,78 @@ router.get('/auto-collect/status', (_req, res) => {
       note: 'Scraped from public profile (may require manual fallback)',
     },
   });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// GOOGLE REVIEWS GOAL TRACKER
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * GET /api/scorecard/review-goals — Return review count data for goal tracking.
+ * Query: year (optional, defaults to current year)
+ *
+ * Returns monthly review counts, cumulative progress, and goal metrics.
+ */
+router.get('/review-goals', (req, res) => {
+  try {
+    const db = getDb();
+    const year = req.query.year || new Date().getFullYear().toString();
+    const annualGoal = parseInt(req.query.annualGoal) || 1500;
+    const monthlyGoal = parseInt(req.query.monthlyGoal) || 100;
+
+    // Get all google_review_count entries for the year
+    const rows = db.prepare(`
+      SELECT month, metric_value FROM scorecard_entries
+      WHERE metric_key = 'google_review_count' AND month >= ? AND month <= ?
+      ORDER BY month
+    `).all(year + '-01', year + '-12');
+
+    // Also get the starting count (last entry from previous year)
+    const prevYear = (parseInt(year) - 1).toString();
+    const baseline = db.prepare(`
+      SELECT metric_value FROM scorecard_entries
+      WHERE metric_key = 'google_review_count' AND month >= ? AND month <= ?
+      ORDER BY month DESC LIMIT 1
+    `).get(prevYear + '-01', prevYear + '-12');
+
+    const startCount = baseline ? baseline.metric_value : 0;
+
+    // Build monthly breakdown
+    const months = [];
+    let prevCount = startCount;
+    for (let m = 1; m <= 12; m++) {
+      const monthKey = year + '-' + String(m).padStart(2, '0');
+      const entry = rows.find(r => r.month === monthKey);
+      const totalCount = entry ? entry.metric_value : null;
+      const newReviews = (totalCount !== null && prevCount > 0) ? totalCount - prevCount : null;
+      months.push({
+        month: monthKey,
+        totalCount,
+        newReviews,
+        monthlyGoal,
+        onTrack: newReviews !== null ? newReviews >= monthlyGoal : null
+      });
+      if (totalCount !== null) prevCount = totalCount;
+    }
+
+    // Current totals
+    const latestCount = prevCount;
+    const totalNewThisYear = startCount > 0 ? latestCount - startCount : null;
+
+    res.json({
+      year,
+      annualGoal,
+      monthlyGoal,
+      startCount,
+      currentCount: latestCount,
+      totalNewThisYear,
+      progressPct: totalNewThisYear !== null ? Math.round((totalNewThisYear / annualGoal) * 100) : null,
+      months
+    });
+  } catch (err) {
+    console.error('Review goals error:', err.message);
+    res.status(500).json({ error: 'Failed to load review goals' });
+  }
 });
 
 module.exports = router;

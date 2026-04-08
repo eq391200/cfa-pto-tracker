@@ -215,7 +215,7 @@ function scorecardAuth(req, res, next) {
   requireAuth(req, res, () => requireDirectorPlus(req, res, next));
 }
 app.use('/api/scorecard',          scorecardAuth, require('./routes/scorecard'));
-app.use('/api/social-posts',       requireAuth, requireAdminOrDirector, require('./routes/socialPosts'));
+app.use('/api/social-posts',       requireAuth, requireAdmin, require('./routes/socialPosts'));
 const gastosModule = require('./routes/gastos');
 app.use('/api/gastos',             requireAuth, requireAdminOrAdministrator, gastosModule.router);
 // Bookmarklet routes — token-based auth (no session), for cross-origin use on Inc. website

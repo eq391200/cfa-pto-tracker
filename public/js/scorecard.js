@@ -203,7 +203,10 @@ ScorecardView.prototype.renderSection = function(sectionKey, metrics, current, p
       html += self.buildCard(extMetrics[j], current, prevYoY, prevMonth, '');
     }
     html += '</div>';
+    // Google Reviews Goal Tracker placeholder
+    html += '<div id="review-goal-tracker" style="margin-top:1.25rem;"></div>';
     document.getElementById(sectionId).innerHTML = html;
+    self.renderReviewGoalTracker();
     return;
   }
 
@@ -480,6 +483,98 @@ ScorecardView.prototype.renderSosTrendChart = async function() {
     },
     plugins: [sosLabelsPlugin]
   });
+};
+
+// ── Google Reviews Goal Tracker ──────────────────────────────────────
+ScorecardView.prototype.renderReviewGoalTracker = async function() {
+  var container = document.getElementById('review-goal-tracker');
+  if (!container) return;
+
+  var picker = document.getElementById(this.ids.monthPicker);
+  var refMonth = picker ? picker.value : null;
+  var year = refMonth ? refMonth.split('-')[0] : new Date().getFullYear().toString();
+
+  try {
+    var res = await fetch('/api/scorecard/review-goals?year=' + year);
+    var data = await res.json();
+    if (data.error) { container.innerHTML = ''; return; }
+
+    var ANNUAL_GOAL = data.annualGoal;
+    var MONTHLY_GOAL = data.monthlyGoal;
+    var currentCount = data.currentCount || 0;
+    var totalNew = data.totalNewThisYear;
+    var progressPct = data.progressPct || 0;
+    if (progressPct > 100) progressPct = 100;
+
+    var html = '';
+    html += '<div style="padding:1.25rem; background:var(--bg-alt, #f8f9fa); border-radius:var(--radius-lg, 12px); border:1px solid var(--border, #e0e0e0);">';
+
+    // Header
+    html += '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">';
+    html += '<div style="font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--brand-navy);"><img src="https://www.google.com/favicon.ico" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;" alt="G"> Google Reviews Goal Tracker ' + year + '</div>';
+    html += '<div style="font-size:0.8rem; color:var(--text-light);">Meta Anual: <strong>' + ANNUAL_GOAL.toLocaleString() + ' reviews</strong> | Meta Mensual: <strong>' + MONTHLY_GOAL + ' reviews</strong></div>';
+    html += '</div>';
+
+    // Progress bar
+    var barColor = progressPct >= 75 ? '#2e7d32' : progressPct >= 50 ? '#F5A623' : '#E51636';
+    html += '<div style="position:relative; background:#e0e0e0; border-radius:20px; height:28px; overflow:hidden; margin-bottom:0.75rem;">';
+    html += '<div style="width:' + progressPct + '%; height:100%; background:' + barColor + '; border-radius:20px; transition:width 0.5s ease;"></div>';
+    html += '<div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:0.8rem; font-weight:700; color:' + (progressPct > 45 ? '#fff' : '#333') + ';">';
+    if (totalNew !== null) {
+      html += totalNew.toLocaleString() + ' / ' + ANNUAL_GOAL.toLocaleString() + ' (' + progressPct + '%)';
+    } else {
+      html += 'Sin datos — ejecuta Auto-Collect para iniciar';
+    }
+    html += '</div></div>';
+
+    // Current total
+    if (currentCount > 0) {
+      html += '<div style="text-align:center; margin-bottom:1rem; font-size:0.85rem; color:var(--text-light);">Total de reviews actual: <strong style="color:var(--brand-navy); font-size:1rem;">' + currentCount.toLocaleString() + '</strong></div>';
+    }
+
+    // Monthly breakdown table
+    var monthsWithData = data.months.filter(function(m) { return m.totalCount !== null; });
+    if (monthsWithData.length > 0) {
+      html += '<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(80px, 1fr)); gap:6px;">';
+      for (var i = 0; i < data.months.length; i++) {
+        var m = data.months[i];
+        var monthIdx = parseInt(m.month.split('-')[1]) - 1;
+        var monthName = SC_MONTH_NAMES[monthIdx];
+        var isCurrentOrPast = m.totalCount !== null;
+        var bg = '#fff'; var borderColor = '#e0e0e0'; var textColor = '#999';
+
+        if (isCurrentOrPast && m.newReviews !== null) {
+          if (m.newReviews >= MONTHLY_GOAL) {
+            bg = '#e8f5e9'; borderColor = '#2e7d32'; textColor = '#2e7d32';
+          } else {
+            bg = '#fce4ec'; borderColor = '#c62828'; textColor = '#c62828';
+          }
+        } else if (isCurrentOrPast) {
+          bg = '#e3f2fd'; borderColor = '#1565c0'; textColor = '#1565c0';
+        }
+
+        html += '<div style="text-align:center; padding:8px 4px; background:' + bg + '; border:1px solid ' + borderColor + '; border-radius:8px;">';
+        html += '<div style="font-size:0.65rem; font-weight:600; text-transform:uppercase; color:' + (isCurrentOrPast ? 'var(--brand-navy)' : '#bbb') + ';">' + monthName + '</div>';
+        if (m.newReviews !== null) {
+          html += '<div style="font-size:1.1rem; font-weight:700; color:' + textColor + ';">' + (m.newReviews >= 0 ? '+' : '') + m.newReviews + '</div>';
+          html += '<div style="font-size:0.55rem; color:var(--text-light);">' + (m.totalCount ? m.totalCount.toLocaleString() : '') + ' total</div>';
+        } else if (m.totalCount !== null) {
+          html += '<div style="font-size:0.9rem; font-weight:600; color:' + textColor + ';">' + m.totalCount.toLocaleString() + '</div>';
+          html += '<div style="font-size:0.55rem; color:var(--text-light);">base</div>';
+        } else {
+          html += '<div style="font-size:0.9rem; color:#ccc;">\u2014</div>';
+        }
+        html += '</div>';
+      }
+      html += '</div>';
+    }
+
+    html += '</div>';
+    container.innerHTML = html;
+  } catch (err) {
+    console.error('Review goal tracker error:', err);
+    container.innerHTML = '';
+  }
 };
 
 // ── OSAT by Weekday Chart ────────────────────────────────────────────

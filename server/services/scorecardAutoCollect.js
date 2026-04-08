@@ -218,10 +218,13 @@ async function runAutoCollect(targetMonth) {
   const collected = {};
   const failed = {};
 
-  // 1. Google Reviews
+  // 1. Google Reviews (rating + total review count)
   const google = await fetchGoogleReviews();
   if (google.success) {
     collected.google_reviews = google.rating;
+    if (google.totalReviews != null) {
+      collected.google_review_count = google.totalReviews;
+    }
     console.log(`  Google Reviews: ${google.rating} (${google.totalReviews} reviews)`);
   } else {
     failed.google_reviews = google.error;

@@ -1036,7 +1036,7 @@
         // Show Executive Scorecard tab for Directors and Senior Directors
         if (['Director', 'Senior Director'].includes(currentUser.employeeRole)) {
           document.getElementById('scorecardTab').style.display = '';
-          document.getElementById('socialPostsTab').style.display = '';
+          // Social Posts is admin-only — not shown in employee portal
         }
         // Show Gastos tab for Administrator role employees
         if (currentUser.employeeRole === 'Administrator') {
