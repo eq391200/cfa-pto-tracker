@@ -119,6 +119,7 @@ function switchTab(tab) {
   if (tab === 'gastos') gastosInit();
   if (tab === 'apprenticeship') apprInit();
   if (tab === 'accounts') loadAccounts();
+  if (tab === 'api-usage') loadApiUsage();
 }
 
 // ── Compliance toggle (Tardiness / Meal Penalties) ──────────────────
@@ -3885,5 +3886,147 @@ async function processSCBulkUpload() {
   } catch (err) {
     document.getElementById('scBulkResult').innerHTML =
       '<div style="padding:0.75rem; background:#fce4ec; border-radius:8px; color:#c62828;">Error de conexión</div>';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// API USAGE & BUDGET DASHBOARD
+// ══════════════════════════════════════════════════════════════════════
+
+async function loadApiUsage() {
+  var container = document.getElementById('apiUsageContent');
+  if (!container) return;
+  container.innerHTML = '<p style="color:var(--text-light);">Loading...</p>';
+
+  try {
+    var res = await fetch('/api/api-usage');
+    var data = await res.json();
+    if (data.error) { container.innerHTML = '<p style="color:#c62828;">' + data.error + '</p>'; return; }
+
+    var html = '';
+    var serviceLabels = { anthropic: 'Anthropic (Claude AI)', google_places: 'Google Places API' };
+
+    for (var svc of ['anthropic', 'google_places']) {
+      var s = data[svc];
+      if (!s) continue;
+      var b = s.budget;
+      var t = s.today;
+      var m = s.thisMonth;
+
+      // Budget status colors
+      var dailyCostPct = b.daily_limit > 0 ? Math.round((t.cost / b.daily_limit) * 100) : 0;
+      var monthlyCostPct = b.monthly_limit > 0 ? Math.round((m.cost / b.monthly_limit) * 100) : 0;
+      var dailyColor = dailyCostPct >= 90 ? '#c62828' : dailyCostPct >= 70 ? '#F5A623' : '#2e7d32';
+      var monthlyColor = monthlyCostPct >= 90 ? '#c62828' : monthlyCostPct >= 70 ? '#F5A623' : '#2e7d32';
+
+      html += '<div style="margin-bottom:1.5rem; padding:1.25rem; background:var(--bg-alt, #f8f9fa); border-radius:12px; border:1px solid var(--border, #e0e0e0);">';
+      html += '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">';
+      html += '<h3 style="margin:0; font-size:1rem; color:var(--brand-navy);">' + (serviceLabels[svc] || svc) + '</h3>';
+      html += '<span style="font-size:0.7rem; padding:3px 8px; border-radius:4px; background:' + (b.is_active ? '#e8f5e9' : '#fce4ec') + '; color:' + (b.is_active ? '#2e7d32' : '#c62828') + ';">' + (b.is_active ? 'Active' : 'Disabled') + '</span>';
+      html += '</div>';
+
+      // Stats grid
+      html += '<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin-bottom:1rem;">';
+
+      // Today card
+      html += '<div style="background:#fff; padding:12px; border-radius:8px; border:1px solid #e0e0e0;">';
+      html += '<div style="font-size:0.65rem; text-transform:uppercase; font-weight:600; color:var(--text-light); margin-bottom:4px;">Hoy</div>';
+      html += '<div style="font-size:1.3rem; font-weight:700; color:' + dailyColor + ';">$' + t.cost.toFixed(3) + '</div>';
+      html += '<div style="font-size:0.75rem; color:var(--text-light);">' + t.calls + ' calls / ' + b.daily_call_limit + ' limit</div>';
+      html += '<div style="margin-top:6px; background:#e0e0e0; border-radius:4px; height:6px; overflow:hidden;">';
+      html += '<div style="width:' + Math.min(dailyCostPct, 100) + '%; height:100%; background:' + dailyColor + ';"></div></div>';
+      html += '<div style="font-size:0.6rem; color:var(--text-light); margin-top:2px;">$' + t.cost.toFixed(3) + ' / $' + b.daily_limit.toFixed(2) + ' (' + dailyCostPct + '%)</div>';
+      html += '</div>';
+
+      // This month card
+      html += '<div style="background:#fff; padding:12px; border-radius:8px; border:1px solid #e0e0e0;">';
+      html += '<div style="font-size:0.65rem; text-transform:uppercase; font-weight:600; color:var(--text-light); margin-bottom:4px;">Este Mes</div>';
+      html += '<div style="font-size:1.3rem; font-weight:700; color:' + monthlyColor + ';">$' + m.cost.toFixed(3) + '</div>';
+      html += '<div style="font-size:0.75rem; color:var(--text-light);">' + m.calls + ' calls / ' + b.monthly_call_limit + ' limit</div>';
+      html += '<div style="margin-top:6px; background:#e0e0e0; border-radius:4px; height:6px; overflow:hidden;">';
+      html += '<div style="width:' + Math.min(monthlyCostPct, 100) + '%; height:100%; background:' + monthlyColor + ';"></div></div>';
+      html += '<div style="font-size:0.6rem; color:var(--text-light); margin-top:2px;">$' + m.cost.toFixed(3) + ' / $' + b.monthly_limit.toFixed(2) + ' (' + monthlyCostPct + '%)</div>';
+      html += '</div>';
+
+      // All time card
+      html += '<div style="background:#fff; padding:12px; border-radius:8px; border:1px solid #e0e0e0;">';
+      html += '<div style="font-size:0.65rem; text-transform:uppercase; font-weight:600; color:var(--text-light); margin-bottom:4px;">Total Historial</div>';
+      html += '<div style="font-size:1.3rem; font-weight:700; color:var(--brand-navy);">$' + s.allTime.cost.toFixed(3) + '</div>';
+      html += '<div style="font-size:0.75rem; color:var(--text-light);">' + s.allTime.calls + ' total calls</div>';
+      if (svc === 'anthropic') {
+        html += '<div style="font-size:0.65rem; color:var(--text-light); margin-top:4px;">' + (s.allTime.input_tokens || 0).toLocaleString() + ' in / ' + (s.allTime.output_tokens || 0).toLocaleString() + ' out tokens</div>';
+      }
+      html += '</div>';
+
+      // Budget settings card
+      html += '<div style="background:#fff; padding:12px; border-radius:8px; border:1px solid #e0e0e0;">';
+      html += '<div style="font-size:0.65rem; text-transform:uppercase; font-weight:600; color:var(--text-light); margin-bottom:4px;">Limits</div>';
+      html += '<div style="font-size:0.75rem;">Daily: <strong>$' + b.daily_limit.toFixed(2) + '</strong> / <strong>' + b.daily_call_limit + ' calls</strong></div>';
+      html += '<div style="font-size:0.75rem;">Monthly: <strong>$' + b.monthly_limit.toFixed(2) + '</strong> / <strong>' + b.monthly_call_limit + ' calls</strong></div>';
+      html += '<button onclick="editApiBudget(\'' + svc + '\')" style="margin-top:6px; font-size:0.65rem; padding:3px 8px; border:1px solid var(--brand-navy); background:transparent; color:var(--brand-navy); border-radius:4px; cursor:pointer;">Edit Limits</button>';
+      html += '</div>';
+      html += '</div>';
+
+      // Recent calls table
+      if (s.recent && s.recent.length > 0) {
+        html += '<details style="margin-top:0.5rem;"><summary style="cursor:pointer; font-size:0.8rem; font-weight:600; color:var(--brand-navy);">Recent Calls (' + s.recent.length + ')</summary>';
+        html += '<table style="width:100%; font-size:0.75rem; margin-top:8px; border-collapse:collapse;">';
+        html += '<thead><tr style="background:#f0f0f0;"><th style="padding:4px 8px; text-align:left;">Endpoint</th><th>Tokens</th><th>Cost</th><th>User</th><th>Status</th><th>Time</th></tr></thead><tbody>';
+        for (var r of s.recent) {
+          var statusColor = r.status === 'success' ? '#2e7d32' : '#c62828';
+          var tokens = svc === 'anthropic' ? (r.input_tokens + ' / ' + r.output_tokens) : '-';
+          var time = r.created_at ? new Date(r.created_at + 'Z').toLocaleString() : '-';
+          html += '<tr style="border-bottom:1px solid #eee;">';
+          html += '<td style="padding:4px 8px;">' + r.endpoint + '</td>';
+          html += '<td style="padding:4px 8px; text-align:center;">' + tokens + '</td>';
+          html += '<td style="padding:4px 8px; text-align:center;">$' + (r.estimated_cost || 0).toFixed(4) + '</td>';
+          html += '<td style="padding:4px 8px;">' + (r.username || '-') + '</td>';
+          html += '<td style="padding:4px 8px; color:' + statusColor + ';">' + r.status + '</td>';
+          html += '<td style="padding:4px 8px; font-size:0.65rem;">' + time + '</td>';
+          html += '</tr>';
+        }
+        html += '</tbody></table></details>';
+      }
+
+      html += '</div>';
+    }
+
+    container.innerHTML = html;
+  } catch (err) {
+    container.innerHTML = '<p style="color:#c62828;">Error loading API usage: ' + err.message + '</p>';
+  }
+}
+
+async function editApiBudget(service) {
+  var labels = { anthropic: 'Anthropic (Claude AI)', google_places: 'Google Places API' };
+  var dailyLimit = prompt(labels[service] + ' — Daily cost limit ($):', '5.00');
+  if (dailyLimit === null) return;
+  var monthlyLimit = prompt('Monthly cost limit ($):', '50.00');
+  if (monthlyLimit === null) return;
+  var dailyCalls = prompt('Daily call limit:', '50');
+  if (dailyCalls === null) return;
+  var monthlyCalls = prompt('Monthly call limit:', '500');
+  if (monthlyCalls === null) return;
+
+  try {
+    var res = await fetch('/api/api-usage/budget/' + service, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        dailyLimit: parseFloat(dailyLimit),
+        monthlyLimit: parseFloat(monthlyLimit),
+        dailyCallLimit: parseInt(dailyCalls),
+        monthlyCallLimit: parseInt(monthlyCalls)
+      })
+    });
+    var data = await res.json();
+    if (data.success) {
+      alert('Budget updated!');
+      loadApiUsage();
+    } else {
+      alert('Error: ' + (data.error || 'Update failed'));
+    }
+  } catch (err) {
+    alert('Error: ' + err.message);
   }
 }

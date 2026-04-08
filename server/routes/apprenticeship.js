@@ -75,6 +75,7 @@ let Anthropic;
 try { Anthropic = require('@anthropic-ai/sdk'); } catch (_) {
   console.warn('Apprenticeship: Anthropic SDK not installed — timesheet OCR unavailable');
 }
+const { logApiCall, checkBudget } = require('../services/apiCostTracker');
 
 let PDFDocument_lib, StandardFonts_lib, rgb_lib;
 try {
@@ -832,6 +833,12 @@ router.post('/timesheets/import', timesheetUpload.single('file'), async (req, re
     if (!Anthropic) return res.status(503).json({ error: 'Anthropic SDK not available — OCR disabled' });
     if (!req.file) return res.status(400).json({ error: 'No PDF file uploaded' });
 
+    // Budget check
+    const budgetCheck = checkBudget('anthropic');
+    if (!budgetCheck.allowed) {
+      return res.status(429).json({ error: 'API budget limit reached: ' + budgetCheck.reason });
+    }
+
     const fileBuffer = fs.readFileSync(req.file.path);
     const base64 = fileBuffer.toString('base64');
 
@@ -854,6 +861,15 @@ router.post('/timesheets/import', timesheetUpload.single('file'), async (req, re
 Extract each employee's name and their total hours worked for the pay period. Be precise with the hours.` }
         ]
       }]
+    });
+
+    // Log API usage
+    logApiCall({
+      service: 'anthropic', endpoint: 'apprenticeship-timesheet-ocr',
+      userId: req.session?.userId, username: req.session?.username,
+      inputTokens: message.usage?.input_tokens || 0,
+      outputTokens: message.usage?.output_tokens || 0,
+      model: OCR_MODEL, status: 'success'
     });
 
     // Parse AI response

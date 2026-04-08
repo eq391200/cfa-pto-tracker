@@ -13,6 +13,7 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const { execFile } = require('child_process');
+const { logApiCall, checkBudget } = require('../services/apiCostTracker');
 
 // ── Photo Upload Config ────────────────────────────────────────────
 const UPLOAD_DIR = path.join(__dirname, '..', '..', 'uploads', 'social-photos');
@@ -164,6 +165,12 @@ Genera el JSON con esta estructura exacta:
   "suggested_photo": "${hasUserPhoto ? 'null (usuario ya subió foto)' : 'file_path de la foto más relevante de la biblioteca, o null si ninguna aplica'}"
 }`;
 
+  // Budget check before making API call
+  const budgetCheck = checkBudget('anthropic');
+  if (!budgetCheck.allowed) {
+    throw new Error('API budget limit reached: ' + budgetCheck.reason);
+  }
+
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -182,10 +189,20 @@ Genera el JSON con esta estructura exacta:
 
   if (!response.ok) {
     const errBody = await response.text();
+    logApiCall({ service: 'anthropic', endpoint: 'social-post-generate', model: 'claude-sonnet-4-20250514', status: 'error', errorMessage: `HTTP ${response.status}` });
     throw new Error(`Claude API error ${response.status}: ${errBody}`);
   }
 
   const result = await response.json();
+
+  // Log API usage & cost
+  logApiCall({
+    service: 'anthropic', endpoint: 'social-post-generate',
+    inputTokens: result.usage?.input_tokens || 0,
+    outputTokens: result.usage?.output_tokens || 0,
+    model: 'claude-sonnet-4-20250514', status: 'success'
+  });
+
   const text = result.content?.[0]?.text || '';
 
   // Parse JSON from response (handle potential markdown wrapping)
@@ -399,6 +416,13 @@ Contexto adicional: ${context || 'N/A'}
 Genera el prompt estructurado para el generador de imágenes AI siguiendo la plantilla exacta.`;
 
   try {
+    // Budget check (non-blocking — falls back to raw prompt if over budget)
+    const budgetCheck = checkBudget('anthropic');
+    if (!budgetCheck.allowed) {
+      console.warn('API budget limit reached for prompt refinement, using raw prompt');
+      return rawInput;
+    }
+
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -416,11 +440,19 @@ Genera el prompt estructurado para el generador de imágenes AI siguiendo la pla
     });
 
     if (!response.ok) {
+      logApiCall({ service: 'anthropic', endpoint: 'social-prompt-refine', model: 'claude-sonnet-4-20250514', status: 'error', errorMessage: `HTTP ${response.status}` });
       console.warn('Claude prompt refinement failed, using raw prompt');
       return rawInput;
     }
 
     const result = await response.json();
+    logApiCall({
+      service: 'anthropic', endpoint: 'social-prompt-refine',
+      inputTokens: result.usage?.input_tokens || 0,
+      outputTokens: result.usage?.output_tokens || 0,
+      model: 'claude-sonnet-4-20250514', status: 'success'
+    });
+
     const refined = (result.content?.[0]?.text || '').trim();
     if (refined.length > 20) {
       console.log('Image prompt refined by Claude:', refined.substring(0, 100) + '...');

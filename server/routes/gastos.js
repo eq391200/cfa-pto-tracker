@@ -29,6 +29,7 @@ let Anthropic;
 try { Anthropic = require('@anthropic-ai/sdk'); } catch (_) {
   console.warn('Anthropic SDK not installed — OCR upload will be unavailable');
 }
+const { logApiCall, checkBudget } = require('../services/apiCostTracker');
 
 // ═══════════════════════════════════════════════════════════════════
 // CONSTANTS & CONFIGURATION
@@ -653,6 +654,12 @@ router.post('/upload-invoice', upload.single('invoice'), async (req, res) => {
       return res.status(503).json({ error: 'Anthropic SDK not installed. Run: npm install @anthropic-ai/sdk' });
     }
 
+    // Budget check before making API call
+    const budgetCheck = checkBudget('anthropic');
+    if (!budgetCheck.allowed) {
+      return res.status(429).json({ error: 'API budget limit reached: ' + budgetCheck.reason });
+    }
+
     const db = getDb();
     const mediaType = getMediaType(req.file.filename);
 
@@ -742,6 +749,15 @@ Return ONLY this JSON (no extra text):
           }]
         });
 
+        // Log API usage & cost
+        logApiCall({
+          service: 'anthropic', endpoint: 'gastos-ocr',
+          userId: req.session?.userId, username: req.session?.username,
+          inputTokens: message.usage?.input_tokens || 0,
+          outputTokens: message.usage?.output_tokens || 0,
+          model: OCR_MODEL, status: 'success'
+        });
+
         const responseText = message.content[0].text;
         const jsonMatch = responseText.match(/\{[\s\S]*\}/);
         if (!jsonMatch) throw new Error('No JSON in response');
@@ -750,6 +766,11 @@ Return ONLY this JSON (no extra text):
           ocrResults.push({ parsed, raw: responseText, page: i + 1 });
         }
       } catch (pageErr) {
+        logApiCall({
+          service: 'anthropic', endpoint: 'gastos-ocr',
+          userId: req.session?.userId, username: req.session?.username,
+          model: OCR_MODEL, status: 'error', errorMessage: pageErr.message
+        });
         console.warn(`OCR page ${i + 1} failed:`, pageErr.message);
         // Skip failed pages — continue with others
       }

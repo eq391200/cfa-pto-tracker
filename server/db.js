@@ -1715,6 +1715,44 @@ function runMigrations(db) {
       CREATE INDEX IF NOT EXISTS idx_audit_log_resource ON audit_log(resource, resource_id);
     `);
   } catch (e) { console.log('v1.27 audit log migration note:', e.message); }
+
+  // v1.28 — API usage tracking for cost monitoring & rate limiting
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS api_usage (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        service TEXT NOT NULL,
+        endpoint TEXT NOT NULL,
+        user_id INTEGER,
+        username TEXT,
+        input_tokens INTEGER DEFAULT 0,
+        output_tokens INTEGER DEFAULT 0,
+        estimated_cost REAL DEFAULT 0,
+        model TEXT,
+        status TEXT DEFAULT 'success',
+        error_message TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_api_usage_service ON api_usage(service, created_at);
+      CREATE INDEX IF NOT EXISTS idx_api_usage_created ON api_usage(created_at);
+
+      CREATE TABLE IF NOT EXISTS api_budgets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        service TEXT NOT NULL UNIQUE,
+        daily_limit REAL DEFAULT 5.00,
+        monthly_limit REAL DEFAULT 50.00,
+        daily_call_limit INTEGER DEFAULT 50,
+        monthly_call_limit INTEGER DEFAULT 500,
+        is_active INTEGER DEFAULT 1,
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+
+      INSERT OR IGNORE INTO api_budgets (service, daily_limit, monthly_limit, daily_call_limit, monthly_call_limit)
+      VALUES
+        ('anthropic', 5.00, 50.00, 50, 500),
+        ('google_places', 1.00, 10.00, 20, 100);
+    `);
+  } catch (e) { console.log('v1.28 api usage migration note:', e.message); }
 }
 
 /**

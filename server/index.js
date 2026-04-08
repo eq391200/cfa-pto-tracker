@@ -222,6 +222,19 @@ app.use('/api/gastos',             requireAuth, requireAdminOrAdministrator, gas
 app.use('/api/gastos-bk',          gastosModule.bookmarkletRouter);
 const apprModule = require('./routes/apprenticeship');
 app.use('/api/apprenticeship',      requireAuth, apprModule.requireApprAccess, apprModule.router);
+
+// ── API Usage & Budget Dashboard (admin only) ──
+const { getUsageSummary, updateBudget } = require('./services/apiCostTracker');
+app.get('/api/api-usage', requireAuth, requireAdmin, (_req, res) => {
+  try { res.json(getUsageSummary()); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.put('/api/api-usage/budget/:service', requireAuth, requireAdmin, (req, res) => {
+  try {
+    updateBudget(req.params.service, req.body);
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
 app.use('/api/apprenticeship/self', requireAuth, apprModule.selfRouter);
 
 // ── Protected Static Files ──────────────────────────────────────────

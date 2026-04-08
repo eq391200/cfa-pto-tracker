@@ -17,6 +17,7 @@
 const https = require('https');
 const http = require('http');
 const { getDb } = require('../db');
+const { logApiCall, checkBudget } = require('./apiCostTracker');
 
 // ── Configuration ──────────────────────────────────────────────────
 const CONFIG = {
@@ -72,6 +73,12 @@ async function fetchGoogleReviews() {
     return { success: false, error: 'GOOGLE_PLACES_API_KEY not configured' };
   }
 
+  // Budget check
+  const budgetCheck = checkBudget('google_places');
+  if (!budgetCheck.allowed) {
+    return { success: false, error: 'Google API budget limit reached: ' + budgetCheck.reason };
+  }
+
   // Use clean API headers (NOT browser User-Agent — Google blocks spoofed browser UAs on API calls)
   try {
     const apiUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${CONFIG.google.placeId}&fields=rating,user_ratings_total&key=${CONFIG.google.apiKey}`;
@@ -85,8 +92,11 @@ async function fetchGoogleReviews() {
     const data = JSON.parse(body);
 
     if (data.status !== 'OK' || !data.result) {
+      logApiCall({ service: 'google_places', endpoint: 'place-details', status: 'error', errorMessage: `${data.status} - ${data.error_message || 'No result'}` });
       return { success: false, error: `Google API: ${data.status} - ${data.error_message || 'No result'}` };
     }
+
+    logApiCall({ service: 'google_places', endpoint: 'place-details', status: 'success' });
 
     return {
       success: true,
@@ -94,6 +104,7 @@ async function fetchGoogleReviews() {
       totalReviews: data.result.user_ratings_total,
     };
   } catch (err) {
+    logApiCall({ service: 'google_places', endpoint: 'place-details', status: 'error', errorMessage: err.message });
     return { success: false, error: `Google API error: ${err.message}` };
   }
 }

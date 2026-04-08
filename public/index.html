@@ -32,6 +32,7 @@
           <button class="tab-nav-item" data-tab="gastos" onclick="switchTab('gastos')" id="tabBtnGastos" style="display:none;">&#128176; Gastos</button>
           <button class="tab-nav-item" data-tab="apprenticeship" onclick="switchTab('apprenticeship')" id="tabBtnAppr">&#127891; Apprenticeship</button>
           <button class="tab-nav-item" data-tab="accounts" onclick="switchTab('accounts')">&#128274; User Accounts</button>
+          <button class="tab-nav-item" data-tab="api-usage" onclick="switchTab('api-usage')">&#9889; API Usage</button>
         </div>
       </div>
       <img src="/img/cfa-logo-red.png" alt="Chick-fil-A" style="height:56px; object-fit:contain; margin:-8px 0;" onerror="this.style.display='none'">
@@ -1526,6 +1527,19 @@
       </div>
     </div>
   </div>
+
+    <!-- API Usage Tab -->
+    <div id="tab-api-usage" style="display:none;">
+      <div class="table-container">
+        <div class="toolbar">
+          <span style="font-size:0.875rem; font-weight:600; color:var(--brand-navy);">API Cost Tracker & Budget Monitor</span>
+          <button class="btn btn-sm btn-primary" style="margin-left:auto;" onclick="loadApiUsage()">Refresh</button>
+        </div>
+        <div id="apiUsageContent" style="padding:1rem;">
+          <p style="color:var(--text-light);">Loading...</p>
+        </div>
+      </div>
+    </div>
 
   <!-- Create Account Modal -->
   <div id="createAccountModal" class="modal-overlay hidden">
