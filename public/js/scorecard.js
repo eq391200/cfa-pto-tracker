@@ -524,8 +524,11 @@ ScorecardView.prototype.renderReviewGoalTracker = async function() {
     html += '<div style="position:relative; background:#e0e0e0; border-radius:20px; height:28px; overflow:hidden; margin-bottom:0.75rem;">';
     html += '<div style="width:' + progressPct + '%; height:100%; background:' + barColor + '; border-radius:20px; transition:width 0.5s ease;"></div>';
     html += '<div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:0.8rem; font-weight:700; color:' + (progressPct > 45 ? '#fff' : '#333') + ';">';
-    if (totalNew !== null && hasData) {
+    if (totalNew !== null && totalNew > 0 && hasData) {
       html += totalNew.toLocaleString() + ' nuevos / ' + ANNUAL_GOAL.toLocaleString() + ' meta (' + progressPct + '%)';
+    } else if (hasData) {
+      var remaining = ANNUAL_GOAL;
+      html += currentCount.toLocaleString() + ' reviews actuales \u2014 Meta: ' + ANNUAL_GOAL.toLocaleString();
     } else {
       html += 'Haz clic en "Actualizar desde Google" para comenzar';
     }

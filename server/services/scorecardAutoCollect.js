@@ -218,12 +218,23 @@ async function runAutoCollect(targetMonth) {
   const collected = {};
   const failed = {};
 
-  // 1. Google Reviews (rating + total review count)
+  // 1. Google Reviews (rating only — review COUNT is saved separately via live fetch
+  //    because the API returns the current snapshot, not historical month-end data)
   const google = await fetchGoogleReviews();
   if (google.success) {
     collected.google_reviews = google.rating;
+    // Save review count for CURRENT month (live snapshot), not targetMonth
     if (google.totalReviews != null) {
-      collected.google_review_count = google.totalReviews;
+      const now = new Date();
+      const currentMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+      const db = getDb();
+      db.prepare(`
+        INSERT INTO scorecard_entries (month, metric_key, metric_value, notes, updated_at)
+        VALUES (?, 'google_review_count', ?, 'auto-collected-snapshot', datetime('now'))
+        ON CONFLICT(month, metric_key)
+        DO UPDATE SET metric_value = excluded.metric_value, notes = 'auto-collected-snapshot', updated_at = datetime('now')
+      `).run(currentMonth, google.totalReviews);
+      console.log(`  Google Review Count: ${google.totalReviews} saved for ${currentMonth} (live snapshot)`);
     }
     console.log(`  Google Reviews: ${google.rating} (${google.totalReviews} reviews)`);
   } else {
