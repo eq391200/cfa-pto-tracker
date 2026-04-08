@@ -487,6 +487,7 @@ ScorecardView.prototype.renderSosTrendChart = async function() {
 
 // ── Google Reviews Goal Tracker ──────────────────────────────────────
 ScorecardView.prototype.renderReviewGoalTracker = async function() {
+  var self = this;
   var container = document.getElementById('review-goal-tracker');
   if (!container) return;
 
@@ -505,25 +506,28 @@ ScorecardView.prototype.renderReviewGoalTracker = async function() {
     var totalNew = data.totalNewThisYear;
     var progressPct = data.progressPct || 0;
     if (progressPct > 100) progressPct = 100;
+    var hasData = data.months.some(function(m) { return m.totalCount !== null; });
 
     var html = '';
     html += '<div style="padding:1.25rem; background:var(--bg-alt, #f8f9fa); border-radius:var(--radius-lg, 12px); border:1px solid var(--border, #e0e0e0);">';
 
-    // Header
-    html += '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">';
+    // Header with fetch button
+    html += '<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:1rem;">';
     html += '<div style="font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--brand-navy);"><img src="https://www.google.com/favicon.ico" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;" alt="G"> Google Reviews Goal Tracker ' + year + '</div>';
-    html += '<div style="font-size:0.8rem; color:var(--text-light);">Meta Anual: <strong>' + ANNUAL_GOAL.toLocaleString() + ' reviews</strong> | Meta Mensual: <strong>' + MONTHLY_GOAL + ' reviews</strong></div>';
-    html += '</div>';
+    html += '<div style="display:flex; align-items:center; gap:10px;">';
+    html += '<span style="font-size:0.75rem; color:var(--text-light);">Meta: <strong>' + ANNUAL_GOAL.toLocaleString() + '/a\u00F1o</strong> | <strong>' + MONTHLY_GOAL + '/mes</strong></span>';
+    html += '<button onclick="window._scFetchReviewCount()" style="font-size:0.7rem; padding:4px 10px; border:1px solid var(--brand-navy); background:var(--brand-navy); color:#fff; border-radius:6px; cursor:pointer;">Actualizar desde Google</button>';
+    html += '</div></div>';
 
     // Progress bar
     var barColor = progressPct >= 75 ? '#2e7d32' : progressPct >= 50 ? '#F5A623' : '#E51636';
     html += '<div style="position:relative; background:#e0e0e0; border-radius:20px; height:28px; overflow:hidden; margin-bottom:0.75rem;">';
     html += '<div style="width:' + progressPct + '%; height:100%; background:' + barColor + '; border-radius:20px; transition:width 0.5s ease;"></div>';
     html += '<div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:0.8rem; font-weight:700; color:' + (progressPct > 45 ? '#fff' : '#333') + ';">';
-    if (totalNew !== null) {
-      html += totalNew.toLocaleString() + ' / ' + ANNUAL_GOAL.toLocaleString() + ' (' + progressPct + '%)';
+    if (totalNew !== null && hasData) {
+      html += totalNew.toLocaleString() + ' nuevos / ' + ANNUAL_GOAL.toLocaleString() + ' meta (' + progressPct + '%)';
     } else {
-      html += 'Sin datos — ejecuta Auto-Collect para iniciar';
+      html += 'Haz clic en "Actualizar desde Google" para comenzar';
     }
     html += '</div></div>';
 
@@ -532,45 +536,74 @@ ScorecardView.prototype.renderReviewGoalTracker = async function() {
       html += '<div style="text-align:center; margin-bottom:1rem; font-size:0.85rem; color:var(--text-light);">Total de reviews actual: <strong style="color:var(--brand-navy); font-size:1rem;">' + currentCount.toLocaleString() + '</strong></div>';
     }
 
-    // Monthly breakdown table
-    var monthsWithData = data.months.filter(function(m) { return m.totalCount !== null; });
-    if (monthsWithData.length > 0) {
-      html += '<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(80px, 1fr)); gap:6px;">';
-      for (var i = 0; i < data.months.length; i++) {
-        var m = data.months[i];
-        var monthIdx = parseInt(m.month.split('-')[1]) - 1;
-        var monthName = SC_MONTH_NAMES[monthIdx];
-        var isCurrentOrPast = m.totalCount !== null;
-        var bg = '#fff'; var borderColor = '#e0e0e0'; var textColor = '#999';
+    // Monthly breakdown grid — always show all 12 months
+    html += '<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(80px, 1fr)); gap:6px;">';
+    for (var i = 0; i < data.months.length; i++) {
+      var m = data.months[i];
+      var monthIdx = parseInt(m.month.split('-')[1]) - 1;
+      var monthName = SC_MONTH_NAMES[monthIdx];
+      var isCurrentOrPast = m.totalCount !== null;
+      var bg = '#fff'; var borderColor = '#e0e0e0'; var textColor = '#999';
 
-        if (isCurrentOrPast && m.newReviews !== null) {
-          if (m.newReviews >= MONTHLY_GOAL) {
-            bg = '#e8f5e9'; borderColor = '#2e7d32'; textColor = '#2e7d32';
-          } else {
-            bg = '#fce4ec'; borderColor = '#c62828'; textColor = '#c62828';
-          }
-        } else if (isCurrentOrPast) {
-          bg = '#e3f2fd'; borderColor = '#1565c0'; textColor = '#1565c0';
-        }
-
-        html += '<div style="text-align:center; padding:8px 4px; background:' + bg + '; border:1px solid ' + borderColor + '; border-radius:8px;">';
-        html += '<div style="font-size:0.65rem; font-weight:600; text-transform:uppercase; color:' + (isCurrentOrPast ? 'var(--brand-navy)' : '#bbb') + ';">' + monthName + '</div>';
-        if (m.newReviews !== null) {
-          html += '<div style="font-size:1.1rem; font-weight:700; color:' + textColor + ';">' + (m.newReviews >= 0 ? '+' : '') + m.newReviews + '</div>';
-          html += '<div style="font-size:0.55rem; color:var(--text-light);">' + (m.totalCount ? m.totalCount.toLocaleString() : '') + ' total</div>';
-        } else if (m.totalCount !== null) {
-          html += '<div style="font-size:0.9rem; font-weight:600; color:' + textColor + ';">' + m.totalCount.toLocaleString() + '</div>';
-          html += '<div style="font-size:0.55rem; color:var(--text-light);">base</div>';
+      if (isCurrentOrPast && m.newReviews !== null && m.newReviews > 0) {
+        if (m.newReviews >= MONTHLY_GOAL) {
+          bg = '#e8f5e9'; borderColor = '#2e7d32'; textColor = '#2e7d32';
         } else {
-          html += '<div style="font-size:0.9rem; color:#ccc;">\u2014</div>';
+          bg = '#fce4ec'; borderColor = '#c62828'; textColor = '#c62828';
         }
-        html += '</div>';
+      } else if (isCurrentOrPast) {
+        bg = '#e3f2fd'; borderColor = '#1565c0'; textColor = '#1565c0';
+      }
+
+      // Clickable to set baseline for empty months
+      var clickAttr = !isCurrentOrPast ? ' onclick="window._scSetBaseline(\'' + m.month + '\')" style="cursor:pointer; text-align:center; padding:8px 4px; background:' + bg + '; border:1px solid ' + borderColor + '; border-radius:8px;" title="Clic para ingresar datos"' : ' style="text-align:center; padding:8px 4px; background:' + bg + '; border:1px solid ' + borderColor + '; border-radius:8px;"';
+
+      html += '<div' + clickAttr + '>';
+      html += '<div style="font-size:0.65rem; font-weight:600; text-transform:uppercase; color:' + (isCurrentOrPast ? 'var(--brand-navy)' : '#bbb') + ';">' + monthName + '</div>';
+      if (m.newReviews !== null && m.newReviews > 0) {
+        html += '<div style="font-size:1.1rem; font-weight:700; color:' + textColor + ';">+' + m.newReviews + '</div>';
+        html += '<div style="font-size:0.55rem; color:var(--text-light);">' + (m.totalCount ? m.totalCount.toLocaleString() : '') + ' total</div>';
+      } else if (isCurrentOrPast) {
+        html += '<div style="font-size:0.9rem; font-weight:600; color:' + textColor + ';">' + (m.totalCount ? m.totalCount.toLocaleString() : '0') + '</div>';
+        html += '<div style="font-size:0.55rem; color:var(--text-light);">' + (m.newReviews === 0 ? 'base' : 'total') + '</div>';
+      } else {
+        html += '<div style="font-size:0.9rem; color:#ccc;">\u2014</div>';
+        html += '<div style="font-size:0.5rem; color:#ccc;">clic para editar</div>';
       }
       html += '</div>';
     }
+    html += '</div>';
 
     html += '</div>';
     container.innerHTML = html;
+
+    // Attach global handlers
+    window._scFetchReviewCount = async function() {
+      try {
+        var btn = container.querySelector('button');
+        if (btn) { btn.disabled = true; btn.textContent = 'Cargando...'; }
+        var r = await fetch('/api/scorecard/review-goals/fetch', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+        var d = await r.json();
+        if (d.error) { alert('Error: ' + d.error); return; }
+        alert('Google Reviews actualizado: ' + d.totalReviews.toLocaleString() + ' reviews (Rating: ' + d.rating + ')');
+        self.renderReviewGoalTracker();
+      } catch (e) { alert('Error: ' + e.message); }
+    };
+
+    window._scSetBaseline = function(month) {
+      var val = prompt('Ingrese el total de Google Reviews para ' + month + ':');
+      if (val === null || val === '') return;
+      var count = parseInt(val);
+      if (isNaN(count) || count < 0) { alert('N\u00FAmero inv\u00E1lido'); return; }
+      fetch('/api/scorecard/review-goals/set-baseline', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ month: month, count: count })
+      }).then(function(r) { return r.json(); }).then(function(d) {
+        if (d.error) { alert('Error: ' + d.error); return; }
+        self.renderReviewGoalTracker();
+      }).catch(function(e) { alert('Error: ' + e.message); });
+    };
   } catch (err) {
     console.error('Review goal tracker error:', err);
     container.innerHTML = '';

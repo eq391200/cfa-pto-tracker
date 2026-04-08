@@ -508,7 +508,7 @@ router.get('/review-goals', (req, res) => {
       ORDER BY month
     `).all(year + '-01', year + '-12');
 
-    // Also get the starting count (last entry from previous year)
+    // Get starting count: last entry from previous year, or first entry this year as baseline
     const prevYear = (parseInt(year) - 1).toString();
     const baseline = db.prepare(`
       SELECT metric_value FROM scorecard_entries
@@ -516,7 +516,8 @@ router.get('/review-goals', (req, res) => {
       ORDER BY month DESC LIMIT 1
     `).get(prevYear + '-01', prevYear + '-12');
 
-    const startCount = baseline ? baseline.metric_value : 0;
+    // If no prior year data, use first entry of current year as baseline
+    const startCount = baseline ? baseline.metric_value : (rows.length > 0 ? rows[0].metric_value : 0);
 
     // Build monthly breakdown
     const months = [];
@@ -525,7 +526,9 @@ router.get('/review-goals', (req, res) => {
       const monthKey = year + '-' + String(m).padStart(2, '0');
       const entry = rows.find(r => r.month === monthKey);
       const totalCount = entry ? entry.metric_value : null;
-      const newReviews = (totalCount !== null && prevCount > 0) ? totalCount - prevCount : null;
+      // For the first entry (baseline month), newReviews is 0 if it IS the baseline
+      const isBaseline = !baseline && rows.length > 0 && rows[0].month === monthKey;
+      const newReviews = (totalCount !== null && prevCount > 0 && !isBaseline) ? totalCount - prevCount : (isBaseline ? 0 : null);
       months.push({
         month: monthKey,
         totalCount,
@@ -538,7 +541,7 @@ router.get('/review-goals', (req, res) => {
 
     // Current totals
     const latestCount = prevCount;
-    const totalNewThisYear = startCount > 0 ? latestCount - startCount : null;
+    const totalNewThisYear = (rows.length > 0 && startCount > 0) ? latestCount - startCount : (rows.length > 0 ? 0 : null);
 
     res.json({
       year,
@@ -553,6 +556,79 @@ router.get('/review-goals', (req, res) => {
   } catch (err) {
     console.error('Review goals error:', err.message);
     res.status(500).json({ error: 'Failed to load review goals' });
+  }
+});
+
+/**
+ * POST /api/scorecard/review-goals/fetch — Fetch live review count from Google
+ * and save it for the current month. Also backfills any months without data.
+ */
+router.post('/review-goals/fetch', async (req, res) => {
+  try {
+    const { fetchGoogleReviews } = require('../services/scorecardAutoCollect');
+    const google = await fetchGoogleReviews();
+    if (!google.success) {
+      return res.status(502).json({ error: google.error });
+    }
+    if (google.totalReviews == null) {
+      return res.status(502).json({ error: 'Google API did not return review count' });
+    }
+
+    const db = getDb();
+    const now = new Date();
+    const currentMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+
+    // Save current count for current month
+    db.prepare(`
+      INSERT INTO scorecard_entries (month, metric_key, metric_value, notes, updated_at)
+      VALUES (?, 'google_review_count', ?, 'live-fetch', datetime('now'))
+      ON CONFLICT(month, metric_key)
+      DO UPDATE SET metric_value = excluded.metric_value, notes = 'live-fetch', updated_at = datetime('now')
+    `).run(currentMonth, google.totalReviews);
+
+    // Also save rating
+    db.prepare(`
+      INSERT INTO scorecard_entries (month, metric_key, metric_value, notes, updated_at)
+      VALUES (?, 'google_reviews', ?, 'live-fetch', datetime('now'))
+      ON CONFLICT(month, metric_key)
+      DO UPDATE SET metric_value = excluded.metric_value, notes = 'live-fetch', updated_at = datetime('now')
+    `).run(currentMonth, google.rating);
+
+    res.json({
+      success: true,
+      month: currentMonth,
+      totalReviews: google.totalReviews,
+      rating: google.rating
+    });
+  } catch (err) {
+    console.error('Review goals fetch error:', err.message);
+    res.status(500).json({ error: 'Failed to fetch review count' });
+  }
+});
+
+/**
+ * POST /api/scorecard/review-goals/set-baseline — Manually set the review count
+ * for a specific month (for backfilling Jan, Feb, etc.)
+ * Body: { month: 'YYYY-MM', count: number }
+ */
+router.post('/review-goals/set-baseline', (req, res) => {
+  try {
+    const { month, count } = req.body;
+    if (!month || count == null) {
+      return res.status(400).json({ error: 'month and count required' });
+    }
+    const db = getDb();
+    db.prepare(`
+      INSERT INTO scorecard_entries (month, metric_key, metric_value, notes, updated_at)
+      VALUES (?, 'google_review_count', ?, 'manual-baseline', datetime('now'))
+      ON CONFLICT(month, metric_key)
+      DO UPDATE SET metric_value = excluded.metric_value, notes = 'manual-baseline', updated_at = datetime('now')
+    `).run(month, parseInt(count));
+
+    res.json({ success: true, month, count: parseInt(count) });
+  } catch (err) {
+    console.error('Set baseline error:', err.message);
+    res.status(500).json({ error: 'Failed to set baseline' });
   }
 });
 
