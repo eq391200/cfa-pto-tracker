@@ -18,6 +18,11 @@ const { getDb } = require('../db');
 const HOURS_THRESHOLD = 130;          // Minimum hours for hourly employee accrual
 const SICK_DAYS_PER_MONTH = 1;        // Flat sick accrual per qualifying month
 const SICK_BALANCE_CAP = 15;          // Max carry-over sick days
+const DEFAULT_HOURS_PER_DAY = 8;      // Standard workday hours
+const WORKDAYS_PER_MONTH = 22;        // Approx workdays for daily hour calculation
+
+// Roles that get the flat 8-hour day benefit regardless of actual hours
+const FLAT_8_ROLES = ['Shift Leader', 'Director', 'Administrator'];
 
 /** Vacation accrual tiers (monthly rates by tenure bracket). */
 const VACATION_TIERS = [
@@ -54,13 +59,14 @@ function runAccrualEngine() {
   `);
 
   const upsertAccrual = db.prepare(`
-    INSERT INTO accruals (employee_id, year, month, sick_days_earned, vacation_days_earned, hours_worked, accrual_type)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO accruals (employee_id, year, month, sick_days_earned, vacation_days_earned, hours_worked, accrual_type, hours_per_day)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(employee_id, year, month) DO UPDATE SET
       sick_days_earned = excluded.sick_days_earned,
       vacation_days_earned = excluded.vacation_days_earned,
       hours_worked = excluded.hours_worked,
       accrual_type = excluded.accrual_type,
+      hours_per_day = excluded.hours_per_day,
       created_at = CURRENT_TIMESTAMP
   `);
 
@@ -103,7 +109,7 @@ function runAccrualEngine() {
         upsertAccrual.run(
           emp.id, mh.year, mh.month,
           sickToAccrue, result.vacationDays,
-          mh.total_hours, result.accrualType
+          mh.total_hours, result.accrualType, result.hoursPerDay
         );
         processed++;
       }
@@ -117,9 +123,13 @@ function runAccrualEngine() {
 /**
  * Calculate accrual for a single employee for a single month.
  *
+ * PR Labor Law: a "day" of PTO = the employee's regular daily hours.
+ * Exempt employees and leadership roles (Shift Leader, Director) get flat 8 hrs/day.
+ * Hourly Team Members/Trainers get their actual avg daily hours (monthly_hours / 22).
+ *
  * @param {Object} employee - Employee record from DB
  * @param {Object} monthlyHours - { year, month, total_hours }
- * @returns {{ sickDays: number, vacationDays: number, accrualType: string }}
+ * @returns {{ sickDays: number, vacationDays: number, accrualType: string, hoursPerDay: number }}
  */
 function calculateAccrual(employee, monthlyHours) {
   const isExempt = employee.employee_type === 'exempt';
@@ -127,7 +137,15 @@ function calculateAccrual(employee, monthlyHours) {
   const qualifies = isExempt || hours >= HOURS_THRESHOLD;
 
   if (!qualifies) {
-    return { sickDays: 0, vacationDays: 0, accrualType: 'hourly_threshold' };
+    return { sickDays: 0, vacationDays: 0, accrualType: 'hourly_threshold', hoursPerDay: 0 };
+  }
+
+  // Determine hours per day for this employee
+  const getsFlat8 = isExempt || FLAT_8_ROLES.includes(employee.role);
+  let hoursPerDay = DEFAULT_HOURS_PER_DAY;
+  if (!getsFlat8 && hours > 0) {
+    hoursPerDay = Math.min(hours / WORKDAYS_PER_MONTH, DEFAULT_HOURS_PER_DAY);
+    hoursPerDay = Math.round(hoursPerDay * 100) / 100;
   }
 
   const tenureDays = calculateTenureDays(employee.first_clock_in, monthlyHours.year, monthlyHours.month);
@@ -136,7 +154,8 @@ function calculateAccrual(employee, monthlyHours) {
   return {
     sickDays: SICK_DAYS_PER_MONTH,
     vacationDays: vacationRate,
-    accrualType: isExempt ? 'exempt_auto' : 'hourly_threshold'
+    accrualType: isExempt ? 'exempt_auto' : 'hourly_threshold',
+    hoursPerDay
   };
 }
 

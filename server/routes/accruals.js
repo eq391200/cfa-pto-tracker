@@ -20,19 +20,23 @@ router.get('/summary', (req, res) => {
     const rows = db.prepare(`
       SELECT
         e.id, e.first_name, e.last_name, e.full_name,
-        e.employee_type, e.status, e.first_clock_in,
+        e.employee_type, e.status, e.first_clock_in, e.role,
         COALESCE(SUM(a.sick_days_earned), 0)   AS total_sick_earned,
         COALESCE(SUM(a.vacation_days_earned), 0) AS total_vacation_earned,
+        COALESCE(SUM(a.sick_days_earned * COALESCE(a.hours_per_day, 8.0)), 0)   AS total_sick_hours_earned,
+        COALESCE(SUM(a.vacation_days_earned * COALESCE(a.hours_per_day, 8.0)), 0) AS total_vacation_hours_earned,
         COALESCE(sick_taken.total, 0)  AS total_sick_taken,
-        COALESCE(vac_taken.total, 0)   AS total_vacation_taken
+        COALESCE(vac_taken.total, 0)   AS total_vacation_taken,
+        COALESCE(sick_taken.total_hours, 0)  AS total_sick_hours_taken,
+        COALESCE(vac_taken.total_hours, 0)   AS total_vacation_hours_taken
       FROM employees e
       LEFT JOIN accruals a ON e.id = a.employee_id
       LEFT JOIN (
-        SELECT employee_id, SUM(days_taken) AS total
+        SELECT employee_id, SUM(days_taken) AS total, SUM(days_taken * 8.0) AS total_hours
         FROM time_off_taken WHERE type = 'sick' GROUP BY employee_id
       ) sick_taken ON e.id = sick_taken.employee_id
       LEFT JOIN (
-        SELECT employee_id, SUM(days_taken) AS total
+        SELECT employee_id, SUM(days_taken) AS total, SUM(days_taken * 8.0) AS total_hours
         FROM time_off_taken WHERE type = 'vacation' GROUP BY employee_id
       ) vac_taken ON e.id = vac_taken.employee_id
       GROUP BY e.id
@@ -56,6 +60,8 @@ router.get('/summary', (req, res) => {
         sick_balance: sickBalance,
         sick_balance_capped: rawSickBalance > SICK_BALANCE_CAP,
         vacation_balance: round2(row.total_vacation_earned - row.total_vacation_taken),
+        vacation_hours_balance: round2(row.total_vacation_hours_earned - row.total_vacation_hours_taken),
+        sick_hours_balance: round2(Math.min(row.total_sick_hours_earned - row.total_sick_hours_taken, SICK_BALANCE_CAP * 8)),
         tenure_days: tenureDays,
         tenure_display: formatTenure(tenureDays)
       };
@@ -84,7 +90,8 @@ router.get('/detail/:employeeId', (req, res) => {
 
     const months = db.prepare(`
       SELECT a.year, a.month, COALESCE(mh.total_hours, 0) AS total_hours,
-             a.sick_days_earned, a.vacation_days_earned, a.accrual_type
+             a.sick_days_earned, a.vacation_days_earned, a.accrual_type,
+             COALESCE(a.hours_per_day, 8.0) AS hours_per_day
       FROM accruals a
       LEFT JOIN monthly_hours mh
         ON mh.employee_id = a.employee_id AND mh.year = a.year AND mh.month = a.month

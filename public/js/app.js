@@ -279,12 +279,12 @@ function renderSummaryTable() {
       <td data-label="Type"><span class="badge badge-${esc(r.employee_type)}">${esc(r.employee_type)}</span></td>
       <td data-label="Status"><span class="badge badge-${esc(r.status)}" style="cursor:pointer;" onclick="toggleStatus(${Number(r.id)}, '${esc(toggleTo)}', 'dashboard')" title="Click to toggle status">${esc(r.status)}</span></td>
       <td data-label="Tenure">${esc(r.tenure_display)}</td>
-      <td data-label="Sick Earned" class="text-right">${r.total_sick_earned.toFixed(1)}</td>
-      <td data-label="Sick Taken" class="text-right">${r.total_sick_taken.toFixed(1)}</td>
-      <td data-label="Sick Bal" class="text-right ${r.sick_balance < 0 ? 'negative' : 'positive'}">${r.sick_balance.toFixed(1)}</td>
-      <td data-label="Vac Earned" class="text-right">${r.total_vacation_earned.toFixed(2)}</td>
-      <td data-label="Vac Taken" class="text-right">${r.total_vacation_taken.toFixed(1)}</td>
-      <td data-label="Vac Bal" class="text-right ${r.vacation_balance < 0 ? 'negative' : 'positive'}">${r.vacation_balance.toFixed(2)}</td>
+      <td data-label="Sick Earned" class="text-right">${(r.total_sick_hours_earned || r.total_sick_earned * 8).toFixed(1)}</td>
+      <td data-label="Sick Taken" class="text-right">${(r.total_sick_hours_taken || r.total_sick_taken * 8).toFixed(1)}</td>
+      <td data-label="Sick Bal" class="text-right ${(r.sick_hours_balance != null ? r.sick_hours_balance : r.sick_balance) < 0 ? 'negative' : 'positive'}">${(r.sick_hours_balance != null ? r.sick_hours_balance : r.sick_balance * 8).toFixed(1)}</td>
+      <td data-label="Vac Earned" class="text-right">${(r.total_vacation_hours_earned || r.total_vacation_earned * 8).toFixed(1)}</td>
+      <td data-label="Vac Taken" class="text-right">${(r.total_vacation_hours_taken || r.total_vacation_taken * 8).toFixed(1)}</td>
+      <td data-label="Vac Bal" class="text-right ${(r.vacation_hours_balance != null ? r.vacation_hours_balance : r.vacation_balance) < 0 ? 'negative' : 'positive'}">${(r.vacation_hours_balance != null ? r.vacation_hours_balance : r.vacation_balance * 8).toFixed(1)}</td>
       <td><button class="btn btn-sm" onclick="viewDetail(${Number(r.id)})">Detail</button></td>
     </tr>`;
   }).join('');
@@ -338,33 +338,31 @@ async function viewDetail(id) {
 
     document.getElementById('detailName').textContent = `${emp.first_name} ${emp.last_name}`;
 
-    const totalSick = data.months.reduce((s, m) => s + (m.sick_days_earned || 0), 0);
-    const totalVac = data.months.reduce((s, m) => s + (m.vacation_days_earned || 0), 0);
-    const sickTaken = data.timeOff.filter(t => t.type === 'sick').reduce((s, t) => s + t.days_taken, 0);
-    const vacTaken = data.timeOff.filter(t => t.type === 'vacation').reduce((s, t) => s + t.days_taken, 0);
+    const totalVacHrs = data.months.reduce((s, m) => s + (m.vacation_days_earned || 0) * (m.hours_per_day || 8), 0);
+    const totalSickHrs = data.months.reduce((s, m) => s + (m.sick_days_earned || 0) * (m.hours_per_day || 8), 0);
+    const sickTakenHrs = data.timeOff.filter(t => t.type === 'sick').reduce((s, t) => s + t.days_taken * 8, 0);
+    const vacTakenHrs = data.timeOff.filter(t => t.type === 'vacation').reduce((s, t) => s + t.days_taken * 8, 0);
 
     document.getElementById('detailStats').innerHTML = `
       <div class="stat-card"><div class="label">Type</div><div class="value" style="font-size:1rem;">${esc(emp.employee_type)}</div></div>
       <div class="stat-card"><div class="label">Start Date</div><div class="value" style="font-size:1rem;">${esc(emp.first_clock_in || 'N/A')}</div></div>
-      <div class="stat-card"><div class="label">Sick Balance</div><div class="value" style="font-size:1.25rem;">${(totalSick - sickTaken).toFixed(1)} days</div></div>
-      <div class="stat-card"><div class="label">Vacation Balance</div><div class="value" style="font-size:1.25rem;">${(totalVac - vacTaken).toFixed(2)} days</div></div>
+      <div class="stat-card"><div class="label">Sick Balance</div><div class="value" style="font-size:1.25rem;">${Math.min(totalSickHrs - sickTakenHrs, 120).toFixed(1)} hrs</div></div>
+      <div class="stat-card"><div class="label">Vacation Balance</div><div class="value" style="font-size:1.25rem;">${(totalVacHrs - vacTakenHrs).toFixed(1)} hrs</div></div>
     `;
 
     document.getElementById('detailBody').innerHTML = data.months.map(m => {
       const qualified = m.sick_days_earned > 0;
-      let vacRate = '-';
-      if (m.vacation_days_earned === 1.25) vacRate = '10 hrs (15+yr)';
-      else if (m.vacation_days_earned === 1.00) vacRate = '8 hrs (5-15yr)';
-      else if (m.vacation_days_earned === 0.75) vacRate = '6 hrs (1-5yr)';
-      else if (m.vacation_days_earned === 0.50) vacRate = '4 hrs (0-1yr)';
+      const hpd = m.hours_per_day || 8;
+      const vacHrs = ((m.vacation_days_earned || 0) * hpd).toFixed(1);
+      const sickHrs = ((m.sick_days_earned || 0) * hpd).toFixed(1);
       return `
         <tr>
           <td>${MONTH_NAMES_SHORT[m.month]} ${m.year}</td>
           <td class="text-right">${m.total_hours.toFixed(1)}</td>
           <td class="text-center">${qualified ? '<span class="badge badge-active">Yes</span>' : '<span class="badge badge-inactive">No</span>'}</td>
-          <td class="text-right">${(m.sick_days_earned || 0).toFixed(0)}</td>
-          <td class="text-right">${(m.vacation_days_earned || 0).toFixed(2)}</td>
-          <td>${qualified ? vacRate : '-'}</td>
+          <td class="text-right">${qualified ? sickHrs + ' hrs' : '0'}</td>
+          <td class="text-right">${qualified ? vacHrs + ' hrs' : '0'}</td>
+          <td class="text-right">${qualified ? hpd.toFixed(1) : '-'}</td>
         </tr>
       `;
     }).join('');

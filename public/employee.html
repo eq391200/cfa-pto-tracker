@@ -72,11 +72,11 @@
             <thead>
               <tr>
                 <th>Month</th>
-                <th class="text-right">Hours</th>
+                <th class="text-right">Hours Worked</th>
                 <th class="text-center">Qualified</th>
                 <th class="text-right">Sick Earned</th>
                 <th class="text-right">Vac Earned</th>
-                <th>Vac Rate</th>
+                <th class="text-right">Hrs/Day</th>
               </tr>
             </thead>
             <tbody id="historyBody"></tbody>
@@ -1187,59 +1187,65 @@
       const res = await fetch(`/api/accruals/detail/${currentUser.employeeId}`);
       const data = await res.json();
 
-      // ── Vacation calculations ──
+      // ── Vacation calculations (in hours using per-month hours_per_day) ──
+      const totalVacHrs = data.months.reduce((s, m) => s + (m.vacation_days_earned || 0) * (m.hours_per_day || 8), 0);
+      const vacTakenHrs = data.timeOff.filter(t => t.type === 'vacation').reduce((s, t) => s + t.days_taken * 8, 0);
+      const vacPendingHrs = data.requests
+        ? data.requests.filter(r => r.type === 'vacation' && r.status === 'pending').reduce((s, r) => s + r.days_requested * 8, 0)
+        : 0;
+      const vacBalanceHrs = Math.round((totalVacHrs - vacTakenHrs) * 100) / 100;
+      const vacAvailableHrs = Math.round((vacBalanceHrs - vacPendingHrs) * 100) / 100;
+      // Keep day-based balance for request form compatibility
       const totalVac = data.months.reduce((s, m) => s + (m.vacation_days_earned || 0), 0);
       const vacTaken = data.timeOff.filter(t => t.type === 'vacation').reduce((s, t) => s + t.days_taken, 0);
-      const vacPending = data.requests
-        ? data.requests.filter(r => r.type === 'vacation' && r.status === 'pending').reduce((s, r) => s + r.days_requested, 0)
-        : 0;
       vacBalance = Math.round((totalVac - vacTaken) * 100) / 100;
-      const vacAvailable = Math.round((vacBalance - vacPending) * 100) / 100;
 
-      // ── Sick calculations (capped at 15 days) ──
+      // ── Sick calculations (in hours, capped) ──
+      const totalSickHrsRaw = data.months.reduce((s, m) => s + (m.sick_days_earned || 0) * (m.hours_per_day || 8), 0);
+      const sickTakenHrs = data.timeOff.filter(t => t.type === 'sick').reduce((s, t) => s + t.days_taken * 8, 0);
+      const sickPendingHrs = data.requests
+        ? data.requests.filter(r => r.type === 'sick' && r.status === 'pending').reduce((s, r) => s + r.days_requested * 8, 0)
+        : 0;
+      const sickBalanceHrs = Math.round(Math.min(totalSickHrsRaw - sickTakenHrs, SICK_CAP * 8) * 100) / 100;
+      const sickAvailableHrs = Math.round((sickBalanceHrs - sickPendingHrs) * 100) / 100;
+      // Keep day-based balance for request form
       const totalSickRaw = data.months.reduce((s, m) => s + (m.sick_days_earned || 0), 0);
       const totalSick = Math.min(totalSickRaw, SICK_CAP);
       const sickTaken = data.timeOff.filter(t => t.type === 'sick').reduce((s, t) => s + t.days_taken, 0);
-      const sickPending = data.requests
-        ? data.requests.filter(r => r.type === 'sick' && r.status === 'pending').reduce((s, r) => s + r.days_requested, 0)
-        : 0;
       sickBalance = Math.round((totalSick - sickTaken) * 100) / 100;
-      const sickAvailable = Math.round((sickBalance - sickPending) * 100) / 100;
 
-      // ── Balance cards ──
+      // ── Balance cards (show hours) ──
       const isExempt = data.employee.employee_type === 'exempt';
       document.getElementById('balances').innerHTML = `
-        <div class="stat-card"><div class="label">Vacation Earned</div><div class="value">${totalVac.toFixed(2)}</div></div>
-        <div class="stat-card"><div class="label">Vacation Used</div><div class="value">${vacTaken.toFixed(2)}</div></div>
-        <div class="stat-card"><div class="label">Vacation Pending</div><div class="value">${vacPending.toFixed(2)}</div></div>
-        <div class="stat-card"><div class="label">Vacation Available</div><div class="value" style="color: var(--brand-red);">${vacAvailable.toFixed(2)}</div></div>
-        ${isExempt ? `<div class="stat-card"><div class="label">Sick Earned</div><div class="value">${totalSick.toFixed(2)}<small style="font-size:0.6em; color:var(--text-light);"> / ${SICK_CAP}</small></div></div>` : ''}
-        <div class="stat-card"><div class="label">Sick Used</div><div class="value">${sickTaken.toFixed(2)}</div></div>
-        ${isExempt ? `<div class="stat-card"><div class="label">Sick Pending</div><div class="value">${sickPending.toFixed(2)}</div></div>` : ''}
-        ${isExempt ? `<div class="stat-card"><div class="label">Sick Available</div><div class="value" style="color: var(--brand-red);">${sickAvailable.toFixed(2)}</div></div>` : ''}
+        <div class="stat-card"><div class="label">Vacation Earned</div><div class="value">${totalVacHrs.toFixed(1)}<small style="font-size:0.5em; color:var(--text-light);"> hrs</small></div></div>
+        <div class="stat-card"><div class="label">Vacation Used</div><div class="value">${vacTakenHrs.toFixed(1)}<small style="font-size:0.5em; color:var(--text-light);"> hrs</small></div></div>
+        <div class="stat-card"><div class="label">Vacation Pending</div><div class="value">${vacPendingHrs.toFixed(1)}<small style="font-size:0.5em; color:var(--text-light);"> hrs</small></div></div>
+        <div class="stat-card"><div class="label">Vacation Available</div><div class="value" style="color: var(--brand-red);">${vacAvailableHrs.toFixed(1)}<small style="font-size:0.5em; color:var(--text-light);"> hrs</small></div></div>
+        ${isExempt ? `<div class="stat-card"><div class="label">Sick Earned</div><div class="value">${Math.min(totalSickHrsRaw, SICK_CAP * 8).toFixed(1)}<small style="font-size:0.5em; color:var(--text-light);"> hrs / ${SICK_CAP * 8}</small></div></div>` : ''}
+        <div class="stat-card"><div class="label">Sick Used</div><div class="value">${sickTakenHrs.toFixed(1)}<small style="font-size:0.5em; color:var(--text-light);"> hrs</small></div></div>
+        ${isExempt ? `<div class="stat-card"><div class="label">Sick Pending</div><div class="value">${sickPendingHrs.toFixed(1)}<small style="font-size:0.5em; color:var(--text-light);"> hrs</small></div></div>` : ''}
+        ${isExempt ? `<div class="stat-card"><div class="label">Sick Available</div><div class="value" style="color: var(--brand-red);">${sickAvailableHrs.toFixed(1)}<small style="font-size:0.5em; color:var(--text-light);"> hrs</small></div></div>` : ''}
       `;
 
       // Update request form balance display
       updateReqBalance();
 
-      // Accrual history — full monthly breakdown
+      // Accrual history — full monthly breakdown (show hours earned)
       document.getElementById('historyBody').innerHTML = data.months.length ?
         data.months.map(m => {
           const qualified = m.sick_days_earned > 0;
-          let vacRate = '-';
-          if (m.vacation_days_earned === 1.25) vacRate = '10 hrs (15+yr)';
-          else if (m.vacation_days_earned === 1.00) vacRate = '8 hrs (5-15yr)';
-          else if (m.vacation_days_earned === 0.75) vacRate = '6 hrs (1-5yr)';
-          else if (m.vacation_days_earned === 0.50) vacRate = '4 hrs (0-1yr)';
+          const hpd = m.hours_per_day || 8;
+          const vacHrs = ((m.vacation_days_earned || 0) * hpd).toFixed(1);
+          const sickHrs = ((m.sick_days_earned || 0) * hpd).toFixed(1);
           const hoursDisplay = isExempt ? 'Salaried' : m.total_hours.toFixed(1);
           return `
             <tr>
               <td data-label="Month">${monthNames[m.month]} ${m.year}</td>
-              <td data-label="Hours" class="text-right">${hoursDisplay}</td>
+              <td data-label="Hours Worked" class="text-right">${hoursDisplay}</td>
               <td data-label="Qualified" class="text-center">${qualified ? '<span class="badge badge-active">Yes</span>' : '<span class="badge badge-inactive">No</span>'}</td>
-              <td data-label="Sick Earned" class="text-right">${(m.sick_days_earned || 0).toFixed(0)}</td>
-              <td data-label="Vac Earned" class="text-right">${(m.vacation_days_earned || 0).toFixed(2)}</td>
-              <td data-label="Vac Rate">${qualified ? vacRate : '-'}</td>
+              <td data-label="Sick Earned" class="text-right">${qualified ? sickHrs + ' hrs' : '0'}</td>
+              <td data-label="Vac Earned" class="text-right">${qualified ? vacHrs + ' hrs' : '0'}</td>
+              <td data-label="Hrs/Day" class="text-right">${qualified ? hpd.toFixed(1) : '-'}</td>
             </tr>
           `;
         }).join('') :

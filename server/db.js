@@ -1753,6 +1753,12 @@ function runMigrations(db) {
         ('google_places', 1.00, 10.00, 20, 100);
     `);
   } catch (e) { console.log('v1.28 api usage migration note:', e.message); }
+
+  // v1.29 — hours_per_day on accruals (PR Labor Law: PTO day = employee's regular daily hours)
+  try {
+    db.exec(`ALTER TABLE accruals ADD COLUMN hours_per_day REAL NOT NULL DEFAULT 8.0`);
+    console.log('v1.29 migration: added hours_per_day to accruals');
+  } catch (e) { console.log('v1.29 migration note:', e.message); }
 }
 
 /**
