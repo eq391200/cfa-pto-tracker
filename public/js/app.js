@@ -351,7 +351,7 @@ async function viewDetail(id) {
     `;
 
     document.getElementById('detailBody').innerHTML = data.months.map(m => {
-      const qualified = m.sick_days_earned > 0;
+      const qualified = m.sick_days_earned > 0 || m.vacation_days_earned > 0 || m.accrual_type === 'exempt_auto';
       const hpd = m.hours_per_day || 8;
       const vacHrs = ((m.vacation_days_earned || 0) * hpd).toFixed(1);
       const sickHrs = ((m.sick_days_earned || 0) * hpd).toFixed(1);
@@ -360,8 +360,8 @@ async function viewDetail(id) {
           <td>${MONTH_NAMES_SHORT[m.month]} ${m.year}</td>
           <td class="text-right">${m.total_hours.toFixed(1)}</td>
           <td class="text-center">${qualified ? '<span class="badge badge-active">Yes</span>' : '<span class="badge badge-inactive">No</span>'}</td>
-          <td class="text-right">${qualified ? sickHrs + ' hrs' : '0'}</td>
-          <td class="text-right">${qualified ? vacHrs + ' hrs' : '0'}</td>
+          <td class="text-right">${sickHrs} hrs</td>
+          <td class="text-right">${vacHrs} hrs</td>
           <td class="text-right">${qualified ? hpd.toFixed(1) : '-'}</td>
         </tr>
       `;
