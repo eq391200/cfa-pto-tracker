@@ -48,14 +48,22 @@ function runAccrualEngine() {
   const getMonthlyHours = db.prepare('SELECT * FROM monthly_hours WHERE employee_id = ? ORDER BY year, month');
 
   // Sick days taken grouped by year-month (for balance tracking)
+  // Excludes migration entries — those are handled as initial deductions
   const getSickTaken = db.prepare(`
     SELECT
       CAST(strftime('%Y', date_taken) AS INTEGER) AS year,
       CAST(strftime('%m', date_taken) AS INTEGER) AS month,
       SUM(days_taken) AS total
     FROM time_off_taken
-    WHERE employee_id = ? AND type = 'sick'
+    WHERE employee_id = ? AND type = 'sick' AND entered_by != 'migration'
     GROUP BY year, month
+  `);
+
+  // Migrated sick days are treated as already used before any accrual period
+  const getMigratedSickTaken = db.prepare(`
+    SELECT COALESCE(SUM(days_taken), 0) AS total
+    FROM time_off_taken
+    WHERE employee_id = ? AND type = 'sick' AND entered_by = 'migration'
   `);
 
   const upsertAccrual = db.prepare(`
@@ -86,15 +94,17 @@ function runAccrualEngine() {
         allMonths = buildExemptMonthList(db, emp, allMonths);
       }
 
-      // Process chronologically, tracking running sick balance
-      let runningSickBalance = 0;
+      // Start with negative balance for migrated sick days (already used before tracking)
+      const migratedSick = getMigratedSickTaken.get(emp.id).total || 0;
+      let runningSickBalance = -migratedSick;
 
       for (const mh of allMonths) {
         const result = calculateAccrual(emp, mh);
 
-        // Subtract sick days used this month
+        // Subtract sick days used this month (don't clamp below initial migrated offset)
         const sickUsed = sickTakenMap.get(`${mh.year}-${mh.month}`) || 0;
-        runningSickBalance = Math.max(0, runningSickBalance - sickUsed);
+        runningSickBalance -= sickUsed;
+        if (runningSickBalance < -migratedSick) runningSickBalance = -migratedSick;
 
         // Cap sick accrual to stay within 15-day limit
         let sickToAccrue = result.sickDays;
