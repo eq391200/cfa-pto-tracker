@@ -18,10 +18,7 @@
           <span class="tab-nav-icon">&#9776;</span>
         </button>
         <div class="tab-nav-menu" id="empTabMenu">
-          <button class="tab-nav-item active" data-tab="history" onclick="switchTab('history')">&#128202; Accrual History</button>
-          <button class="tab-nav-item" data-tab="timeoff" onclick="switchTab('timeoff')">&#128197; Time-Off History</button>
-          <button class="tab-nav-item" data-tab="request" onclick="switchTab('request')">&#128221; Request Time-Off</button>
-          <button class="tab-nav-item" data-tab="myrequests" onclick="switchTab('myrequests')">&#128203; My Requests</button>
+          <button class="tab-nav-item active" data-tab="history" onclick="switchTab('history')">&#128202; Time Off</button>
           <button class="tab-nav-item" data-tab="reviews" onclick="switchTab('reviews')">&#11088; Performance Reviews</button>
           <button class="tab-nav-item" data-tab="manage-reviews" onclick="switchTab('manage-reviews')" id="manageReviewsTab" style="display:none;">&#128736; Manage Reviews</button>
           <button class="tab-nav-item" data-tab="ac-submit" onclick="switchTab('ac-submit')" id="acSubmitTab" style="display:none;">&#9989; Hospitality Evaluations</button>
@@ -59,135 +56,145 @@
     <div class="stats-grid" id="balances"></div>
 
 
-    <!-- Accrual History Tab -->
+    <!-- Time Off Tab (combined) -->
     <div id="tab-history">
-      <div class="table-container" style="max-height:500px; overflow-y:auto;">
-        <table class="responsive-table">
-          <thead>
-            <tr>
-              <th>Month</th>
-              <th class="text-right">Hours</th>
-              <th class="text-center">Qualified</th>
-              <th class="text-right">Sick Earned</th>
-              <th class="text-right">Vac Earned</th>
-              <th>Vac Rate</th>
-            </tr>
-          </thead>
-          <tbody id="historyBody"></tbody>
-        </table>
+      <div style="display:flex; align-items:center; gap:0; border-bottom:2px solid var(--border); padding:0 1.5rem; margin-bottom:1rem;">
+        <button id="ptoToggleAccrual" class="comp-toggle active" onclick="switchPtoSubtab('accrual')">&#128202; Accrual History</button>
+        <button id="ptoToggleTimeoff" class="comp-toggle" onclick="switchPtoSubtab('timeoff')">&#128197; Time-Off History</button>
+        <button id="ptoToggleRequest" class="comp-toggle" onclick="switchPtoSubtab('request')">&#128221; Request Time-Off</button>
+        <button id="ptoToggleMyrequests" class="comp-toggle" onclick="switchPtoSubtab('myrequests')">&#128203; My Requests</button>
       </div>
-    </div>
 
-    <!-- Time-Off History Tab -->
-    <div id="tab-timeoff" style="display:none;">
-      <div class="table-container" style="max-height:500px; overflow-y:auto;">
-        <table class="responsive-table">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Type</th>
-              <th class="text-right">Days</th>
-              <th>Notes</th>
-            </tr>
-          </thead>
-          <tbody id="timeOffBody"></tbody>
-        </table>
+      <!-- Sub-tab: Accrual History -->
+      <div id="pto-sub-accrual">
+        <div class="table-container" style="max-height:500px; overflow-y:auto;">
+          <table class="responsive-table">
+            <thead>
+              <tr>
+                <th>Month</th>
+                <th class="text-right">Hours</th>
+                <th class="text-center">Qualified</th>
+                <th class="text-right">Sick Earned</th>
+                <th class="text-right">Vac Earned</th>
+                <th>Vac Rate</th>
+              </tr>
+            </thead>
+            <tbody id="historyBody"></tbody>
+          </table>
+        </div>
       </div>
-    </div>
 
-    <!-- Request Tab -->
-    <div id="tab-request" style="display:none;">
-      <div class="detail-panel" style="max-width:500px;">
-        <h2 id="requestFormTitle">Request Time Off</h2>
-        <p id="requestFormDesc" style="color:var(--text-light); margin-bottom:1rem;">Submit a request for time off. Your manager will review and approve or reject it.</p>
-        <form id="requestForm" onsubmit="submitRequest(event)">
-          <div class="form-group">
-            <label for="reqType">Type</label>
-            <select id="reqType" required onchange="onReqTypeChange()">
-              <option value="vacation">Vacation</option>
-              <option value="sick">Sick</option>
-              <option value="punch_adjustment">Punch Adjustment</option>
-            </select>
-          </div>
-
-          <!-- PTO Fields (vacation/sick) -->
-          <div id="ptoFields">
-            <div class="form-group">
-              <label for="reqDays">Days Requested</label>
-              <input type="number" id="reqDays" step="0.125" min="0.125">
-              <small style="color:var(--text-light);">Available <span id="reqBalType">vacation</span> balance: <strong id="reqBalance">-</strong> days</small>
-            </div>
-            <div class="form-group">
-              <label for="reqStart">Start Date</label>
-              <input type="date" id="reqStart">
-            </div>
-            <div class="form-group">
-              <label for="reqEnd">End Date</label>
-              <input type="date" id="reqEnd">
-            </div>
-          </div>
-
-          <!-- Punch Adjustment Fields -->
-          <div id="punchFields" style="display:none;">
-            <div class="form-group">
-              <label for="punchDate">Date of Missed Punch</label>
-              <input type="date" id="punchDate">
-            </div>
-            <div class="form-group">
-              <label for="clockIn">Clock-In Time</label>
-              <input type="time" id="clockIn">
-            </div>
-            <div class="form-group">
-              <label for="clockOut">Clock-Out Time</label>
-              <input type="time" id="clockOut">
-            </div>
-            <div class="form-group">
-              <label for="breakStart">Break Start Time <small style="color:var(--text-light);">(optional)</small></label>
-              <input type="time" id="breakStart">
-            </div>
-            <div class="form-group">
-              <label for="breakEnd">Break End Time <small style="color:var(--text-light);">(optional)</small></label>
-              <input type="time" id="breakEnd">
-            </div>
-            <div class="form-group" style="background:var(--bg-alt); padding:1rem; border-radius:8px; border:1px solid var(--border);">
-              <label style="display:flex; align-items:flex-start; gap:0.5rem; margin-bottom:0.75rem; cursor:pointer;">
-                <input type="checkbox" id="ackPromise" style="width:auto; margin-top:3px;">
-                <span>I promise to make my punches correctly going forward.</span>
-              </label>
-              <label style="display:flex; align-items:flex-start; gap:0.5rem; cursor:pointer;">
-                <input type="checkbox" id="ackFault" style="width:auto; margin-top:3px;">
-                <span>I understand that not punching is a fault and I can receive disciplinary action.</span>
-              </label>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="reqReason">Notes (optional)</label>
-            <textarea id="reqReason" rows="2"></textarea>
-          </div>
-          <button type="submit" class="btn btn-primary">Submit Request</button>
-        </form>
+      <!-- Sub-tab: Time-Off History -->
+      <div id="pto-sub-timeoff" style="display:none;">
+        <div class="table-container" style="max-height:500px; overflow-y:auto;">
+          <table class="responsive-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Type</th>
+                <th class="text-right">Days</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody id="timeOffBody"></tbody>
+          </table>
+        </div>
       </div>
-    </div>
 
-    <!-- My Requests Tab -->
-    <div id="tab-myrequests" style="display:none;">
-      <div class="table-container">
-        <table class="responsive-table">
-          <thead>
-            <tr>
-              <th>Type</th>
-              <th class="text-right">Days</th>
-              <th>Start</th>
-              <th>End</th>
-              <th>Reason</th>
-              <th>Status</th>
-              <th>Reviewed By</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="myRequestsBody"></tbody>
-        </table>
+      <!-- Sub-tab: Request Time-Off -->
+      <div id="pto-sub-request" style="display:none;">
+        <div class="detail-panel" style="max-width:500px;">
+          <h2 id="requestFormTitle">Request Time Off</h2>
+          <p id="requestFormDesc" style="color:var(--text-light); margin-bottom:1rem;">Submit a request for time off. Your manager will review and approve or reject it.</p>
+          <form id="requestForm" onsubmit="submitRequest(event)">
+            <div class="form-group">
+              <label for="reqType">Type</label>
+              <select id="reqType" required onchange="onReqTypeChange()">
+                <option value="vacation">Vacation</option>
+                <option value="sick">Sick</option>
+                <option value="punch_adjustment">Punch Adjustment</option>
+              </select>
+            </div>
+
+            <!-- PTO Fields (vacation/sick) -->
+            <div id="ptoFields">
+              <div class="form-group">
+                <label for="reqDays">Days Requested</label>
+                <input type="number" id="reqDays" step="0.125" min="0.125">
+                <small style="color:var(--text-light);">Available <span id="reqBalType">vacation</span> balance: <strong id="reqBalance">-</strong> days</small>
+              </div>
+              <div class="form-group">
+                <label for="reqStart">Start Date</label>
+                <input type="date" id="reqStart">
+              </div>
+              <div class="form-group">
+                <label for="reqEnd">End Date</label>
+                <input type="date" id="reqEnd">
+              </div>
+            </div>
+
+            <!-- Punch Adjustment Fields -->
+            <div id="punchFields" style="display:none;">
+              <div class="form-group">
+                <label for="punchDate">Date of Missed Punch</label>
+                <input type="date" id="punchDate">
+              </div>
+              <div class="form-group">
+                <label for="clockIn">Clock-In Time</label>
+                <input type="time" id="clockIn">
+              </div>
+              <div class="form-group">
+                <label for="clockOut">Clock-Out Time</label>
+                <input type="time" id="clockOut">
+              </div>
+              <div class="form-group">
+                <label for="breakStart">Break Start Time <small style="color:var(--text-light);">(optional)</small></label>
+                <input type="time" id="breakStart">
+              </div>
+              <div class="form-group">
+                <label for="breakEnd">Break End Time <small style="color:var(--text-light);">(optional)</small></label>
+                <input type="time" id="breakEnd">
+              </div>
+              <div class="form-group" style="background:var(--bg-alt); padding:1rem; border-radius:8px; border:1px solid var(--border);">
+                <label style="display:flex; align-items:flex-start; gap:0.5rem; margin-bottom:0.75rem; cursor:pointer;">
+                  <input type="checkbox" id="ackPromise" style="width:auto; margin-top:3px;">
+                  <span>I promise to make my punches correctly going forward.</span>
+                </label>
+                <label style="display:flex; align-items:flex-start; gap:0.5rem; cursor:pointer;">
+                  <input type="checkbox" id="ackFault" style="width:auto; margin-top:3px;">
+                  <span>I understand that not punching is a fault and I can receive disciplinary action.</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="reqReason">Notes (optional)</label>
+              <textarea id="reqReason" rows="2"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Submit Request</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Sub-tab: My Requests -->
+      <div id="pto-sub-myrequests" style="display:none;">
+        <div class="table-container">
+          <table class="responsive-table">
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th class="text-right">Days</th>
+                <th>Start</th>
+                <th>End</th>
+                <th>Reason</th>
+                <th>Status</th>
+                <th>Reviewed By</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="myRequestsBody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
     <!-- Performance Reviews Tab -->
@@ -1168,6 +1175,14 @@
       };
     }
 
+    function switchPtoSubtab(sub) {
+      ['accrual', 'timeoff', 'request', 'myrequests'].forEach(function(s) {
+        document.getElementById('pto-sub-' + s).style.display = s === sub ? '' : 'none';
+        document.getElementById('ptoToggle' + s.charAt(0).toUpperCase() + s.slice(1)).classList.toggle('active', s === sub);
+      });
+      if (sub === 'myrequests') loadMyRequests();
+    }
+
     async function loadData() {
       const res = await fetch(`/api/accruals/detail/${currentUser.employeeId}`);
       const data = await res.json();
@@ -1337,7 +1352,7 @@
           document.getElementById('requestForm').reset();
           onReqTypeChange();
           loadData();
-          switchTab('myrequests');
+          switchPtoSubtab('myrequests');
         } else {
           alert('Error: ' + data.error);
         }
@@ -1369,7 +1384,7 @@
           alert('Request submitted successfully!');
           document.getElementById('requestForm').reset();
           loadData();
-          switchTab('myrequests');
+          switchPtoSubtab('myrequests');
         } else {
           alert('Error: ' + data.error);
         }
@@ -1670,13 +1685,12 @@
         activeBtn.classList.add('active');
       }
       // Show balance cards only on accrual/time-off related tabs
-      const showBalances = ['history', 'timeoff', 'request', 'myrequests'].includes(tab);
+      const showBalances = tab === 'history';
       document.getElementById('balances').style.display = showBalances ? '' : 'none';
       // Save current tab to URL hash so refresh stays on same tab
       window.location.hash = tab;
       // Close mobile menu
       document.querySelector('.tab-nav')?.classList.remove('open');
-      if (tab === 'myrequests') loadMyRequests();
       if (tab === 'reviews') loadEmployeeReviews();
       if (tab === 'manage-reviews') dirLoadReviews();
       if (tab === 'ac-submit') loadACSubmitTab();
