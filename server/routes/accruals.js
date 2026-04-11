@@ -204,6 +204,29 @@ router.get('/validation-status', (req, res) => {
   }
 });
 
+// ── GET /api/accruals/debug-sick/:employeeId — Debug sick cap data ──
+router.get('/debug-sick/:employeeId', (req, res) => {
+  if (req.session.role !== 'admin') {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+
+  try {
+    const db = getDb();
+    const { employeeId } = req.params;
+    const emp = db.prepare('SELECT id, full_name, employee_type, role, first_clock_in FROM employees WHERE id = ?').get(employeeId);
+    if (!emp) return res.status(404).json({ error: 'Not found' });
+
+    const accruals = db.prepare('SELECT year, month, sick_days_earned, vacation_days_earned, hours_worked, accrual_type FROM accruals WHERE employee_id = ? ORDER BY year, month').all(employeeId);
+    const sickTaken = db.prepare("SELECT * FROM time_off_taken WHERE employee_id = ? AND type = 'sick' ORDER BY date_taken").all(employeeId);
+    const totalEarned = accruals.reduce((s, a) => s + a.sick_days_earned, 0);
+    const totalTaken = sickTaken.reduce((s, r) => s + r.days_taken, 0);
+
+    res.json({ employee: emp, accruals, sickTaken, totalEarned, totalTaken, balance: totalEarned - totalTaken });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── Helpers ─────────────────────────────────────────────────────────
 
 /** Round to 2 decimal places (avoids floating-point drift). */
