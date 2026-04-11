@@ -9,6 +9,7 @@
 const express = require('express');
 const { getDb } = require('../db');
 const { runAccrualEngine, checkInactiveEmployees, SICK_BALANCE_CAP } = require('../services/accrualEngine');
+const { recalculateAndValidate, getValidationStatus } = require('../services/accrualValidator');
 
 const router = express.Router();
 
@@ -175,12 +176,31 @@ router.post('/recalculate', (req, res) => {
   }
 
   try {
-    const result = runAccrualEngine();
-    const flagged = checkInactiveEmployees();
-    res.json({ success: true, processed: result.processed, flaggedForReview: flagged });
+    const result = recalculateAndValidate('manual');
+    res.json({
+      success: true,
+      processed: result.recalculated,
+      flaggedForReview: result.flagged,
+      anomalies: result.anomalies
+    });
   } catch (err) {
     console.error('Error recalculating accruals:', err.message);
     res.status(500).json({ error: 'Accrual recalculation failed' });
+  }
+});
+
+// ── GET /api/accruals/validation-status — Latest validation results ──
+router.get('/validation-status', (req, res) => {
+  if (req.session.role !== 'admin') {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+
+  try {
+    const status = getValidationStatus();
+    res.json(status);
+  } catch (err) {
+    console.error('Error loading validation status:', err.message);
+    res.status(500).json({ error: 'Failed to load validation status' });
   }
 });
 

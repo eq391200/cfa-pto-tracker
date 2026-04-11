@@ -113,6 +113,17 @@
         <a href="#" onclick="clearPtoConcernsFilter(); return false;" style="margin-left:1rem; font-weight:600;">✕ Clear filter</a>
       </div>
 
+      <!-- Accrual Validation Alerts -->
+      <div id="accrualAlertsBanner" class="alert-banner" style="display:none; background:#fff3cd; border:1px solid #ffc107; border-radius:8px; padding:0.75rem 1rem; margin-bottom:1rem;">
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+          <span style="font-size:1.1rem;">&#9888;</span>
+          <strong>Accrual Validation</strong>
+          <span id="accrualAlertText" style="flex:1;"></span>
+          <button class="btn btn-sm" onclick="dismissAccrualAlert()" style="padding:0.2rem 0.5rem;">Dismiss</button>
+        </div>
+        <div id="accrualAlertDetails" style="display:none; margin-top:0.5rem; font-size:0.85rem; color:#856404;"></div>
+      </div>
+
       <div class="table-container">
         <div class="toolbar">
           <input type="text" id="searchInput" placeholder="Search employees..." style="max-width:300px;" oninput="filterTable()">

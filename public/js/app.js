@@ -196,6 +196,7 @@ async function loadDashboard() {
 
     buildNotifList(stats);
     renderSummaryTable();
+    checkAccrualValidation();
   } catch (err) {
     console.error('Failed to load dashboard:', err);
   }
@@ -969,8 +970,51 @@ async function recalculate() {
   if (!confirm('Recalculate all accruals? This may take a moment.')) return;
   const res = await fetch('/api/accruals/recalculate', { method: 'POST' });
   const data = await res.json();
-  alert(`Recalculation complete. ${data.processed} accruals processed.`);
+  let msg = `Recalculation complete. ${data.processed} accruals processed.`;
+  if (data.anomalies && data.anomalies.length > 0) {
+    msg += `\n\n⚠ ${data.anomalies.length} anomalies detected — check the alerts banner.`;
+  }
+  alert(msg);
   loadDashboard();
+}
+
+async function checkAccrualValidation() {
+  try {
+    const res = await fetch('/api/accruals/validation-status');
+    if (!res.ok) return;
+    const data = await res.json();
+    const banner = document.getElementById('accrualAlertsBanner');
+    if (!banner || dismissedAlerts.has('accrualValidation')) return;
+
+    if (data.latest && data.latest.anomalies_found > 0) {
+      const runDate = new Date(data.latest.run_at + 'Z');
+      const label = data.latest.trigger_type === 'startup' ? 'Startup' : data.latest.trigger_type === 'cron' ? 'Nightly' : 'Manual';
+      document.getElementById('accrualAlertText').innerHTML =
+        `${label} check found <strong>${data.latest.anomalies_found} anomalies</strong> (${runDate.toLocaleDateString()} ${runDate.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})})`;
+
+      let details = '';
+      if (data.latest.anomaly_details) {
+        try {
+          const anomalies = JSON.parse(data.latest.anomaly_details);
+          details = anomalies.map(a => `<div>&#8226; <strong>${esc(a.type)}</strong> — ${esc(a.employee)}: ${esc(a.detail)}</div>`).join('');
+        } catch(_) {}
+      }
+      if (details) {
+        const detailsEl = document.getElementById('accrualAlertDetails');
+        detailsEl.innerHTML = details;
+        detailsEl.style.display = 'block';
+      }
+      banner.style.display = 'block';
+    } else {
+      banner.style.display = 'none';
+    }
+  } catch (_) {}
+}
+
+function dismissAccrualAlert() {
+  document.getElementById('accrualAlertsBanner').style.display = 'none';
+  dismissedAlerts.add('accrualValidation');
+  sessionStorage.setItem('dismissedAlerts', JSON.stringify([...dismissedAlerts]));
 }
 
 // ── User Accounts Tab ───────────────────────────────────────────────

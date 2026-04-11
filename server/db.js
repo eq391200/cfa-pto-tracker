@@ -1759,6 +1759,20 @@ function runMigrations(db) {
     db.exec(`ALTER TABLE accruals ADD COLUMN hours_per_day REAL NOT NULL DEFAULT 8.0`);
     console.log('v1.29 migration: added hours_per_day to accruals');
   } catch (e) { console.log('v1.29 migration note:', e.message); }
+
+  // v1.30 — Accrual validation log (reliability system)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS accrual_validation_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      run_at TEXT NOT NULL DEFAULT (datetime('now')),
+      trigger_type TEXT NOT NULL CHECK(trigger_type IN ('startup', 'cron', 'manual')),
+      records_recalculated INTEGER NOT NULL DEFAULT 0,
+      anomalies_found INTEGER NOT NULL DEFAULT 0,
+      anomaly_details TEXT,
+      resolved INTEGER NOT NULL DEFAULT 0,
+      duration_ms INTEGER
+    )
+  `);
 }
 
 /**

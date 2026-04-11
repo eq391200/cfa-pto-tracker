@@ -19,6 +19,7 @@ const SQLiteStore = require('connect-sqlite3')(session);
 const path = require('path');
 const { initDb, getDb } = require('./db');
 const { SESSION_MAX_AGE_MS, DEFAULT_PORT } = require('./utils/constants');
+const { recalculateAndValidate } = require('./services/accrualValidator');
 
 const app = express();
 const PORT = process.env.PORT || DEFAULT_PORT;
@@ -260,7 +261,44 @@ app.use((err, _req, res, _next) => {
 // ── Start Server ────────────────────────────────────────────────────
 const server = app.listen(PORT, () => {
   console.log(`Restaurant Admin Hub running at http://localhost:${PORT}`);
+
+  // Auto-recalculate accruals on every server start (idempotent)
+  try {
+    recalculateAndValidate('startup');
+  } catch (e) {
+    console.error('[Startup] Accrual recalculation failed:', e.message);
+  }
 });
+
+// ── Nightly Accrual Validation (2:00 AM daily) ─────────────────────
+function scheduleNightlyValidation() {
+  const now = new Date();
+  const next2AM = new Date(now);
+  next2AM.setHours(2, 0, 0, 0);
+  if (next2AM <= now) next2AM.setDate(next2AM.getDate() + 1);
+
+  const msUntil = next2AM.getTime() - now.getTime();
+  setTimeout(() => {
+    try {
+      recalculateAndValidate('cron');
+    } catch (e) {
+      console.error('[Cron] Nightly accrual validation failed:', e.message);
+    }
+    // Schedule next run in ~24h
+    setInterval(() => {
+      try {
+        recalculateAndValidate('cron');
+      } catch (e) {
+        console.error('[Cron] Nightly accrual validation failed:', e.message);
+      }
+    }, 24 * 60 * 60 * 1000).unref();
+  }, msUntil).unref();
+
+  const hours = Math.floor(msUntil / 3600000);
+  const mins = Math.floor((msUntil % 3600000) / 60000);
+  console.log(`[Cron] Nightly accrual validation scheduled — next run in ${hours}h ${mins}m`);
+}
+scheduleNightlyValidation();
 
 // ── Graceful Shutdown ──────────────────────────────────────────────
 function gracefulShutdown(signal) {
